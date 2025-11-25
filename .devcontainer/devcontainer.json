@@ -1,0 +1,17 @@
+{
+    "name": "ply2splat-dev",
+    "image": "mcr.microsoft.com/devcontainers/rust:1-1-bullseye",
+    "features": {
+        "ghcr.io/devcontainers/features/nix:1": {}
+    },
+    "postCreateCommand": "rustup toolchain install nightly && cargo install cargo-fuzz",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "rust-lang.rust-analyzer",
+                "tamasfe.even-better-toml",
+                "serayuzgur.crates"
+            ]
+        }
+    }
+}

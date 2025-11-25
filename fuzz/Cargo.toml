@@ -1,0 +1,19 @@
+[package]
+name = "ply2splat-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+ply2splat = { path = ".." }
+arbitrary = { version = "1", features = ["derive"] }
+
+[[bin]]
+name = "fuzz_conversion"
+path = "fuzz_targets/fuzz_conversion.rs"
+test = false
+doc = false
