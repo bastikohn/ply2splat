@@ -397,7 +397,7 @@ mod python {
         /// Iterate over all splats.
         fn __iter__(slf: PyRef<'_, Self>) -> SplatIterator {
             SplatIterator {
-                splats: slf.splats.clone(),
+                data: slf.into(),
                 index: 0,
             }
         }
@@ -420,7 +420,7 @@ mod python {
     /// Iterator for SplatData.
     #[pyclass]
     pub struct SplatIterator {
-        splats: Vec<SplatPoint>,
+        data: Py<SplatData>,
         index: usize,
     }
 
@@ -431,8 +431,12 @@ mod python {
         }
 
         fn __next__(mut slf: PyRefMut<'_, Self>) -> Option<Splat> {
-            if slf.index < slf.splats.len() {
-                let splat = Splat::from(&slf.splats[slf.index]);
+            let py = slf.py();
+            let data = slf.data.borrow(py);
+            let current_index = slf.index;
+            if current_index < data.splats.len() {
+                let splat = Splat::from(&data.splats[current_index]);
+                drop(data); // Release the borrow before mutating
                 slf.index += 1;
                 Some(splat)
             } else {
