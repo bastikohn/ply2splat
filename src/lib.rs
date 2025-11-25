@@ -177,31 +177,40 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
 ///
 /// This function performs the conversion in parallel using `rayon`.
-/// It also sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
+/// When `sort` is true, it sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
 ///
 /// # Arguments
 /// * `ply_points` - A vector of raw `PlyGaussian` data.
+/// * `sort` - Whether to sort the splats by importance (volume * opacity). Defaults to true for optimal rendering.
 ///
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
-pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
-    // Parallel convert to (SplatPoint, key)
-    let mut data: Vec<(SplatPoint, f32)> = ply_points
-        .into_par_iter()
-        .map(|p| SplatPoint::from_ply(&p))
-        .collect();
+pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
+    if sort {
+        // Parallel convert to (SplatPoint, key)
+        let mut data: Vec<(SplatPoint, f32)> = ply_points
+            .into_par_iter()
+            .map(|p| SplatPoint::from_ply(&p))
+            .collect();
 
-    // Parallel sort by key, tie-break by position (x, y, z)
-    // This ensures deterministic output even across different platforms/architectures
-    data.par_sort_by(|a, b| {
-        a.1.total_cmp(&b.1)
-            .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-            .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-            .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-    });
+        // Parallel sort by key, tie-break by position (x, y, z)
+        // This ensures deterministic output even across different platforms/architectures
+        data.par_sort_by(|a, b| {
+            a.1.total_cmp(&b.1)
+                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
+        });
 
-    // Parallel strip key
-    data.into_par_iter().map(|(s, _)| s).collect()
+        // Parallel strip key
+        data.into_par_iter().map(|(s, _)| s).collect()
+    } else {
+        // Parallel convert without sorting - preserves original order
+        ply_points
+            .into_par_iter()
+            .map(|p| SplatPoint::from_ply(&p).0)
+            .collect()
+    }
 }
 
 /// Saves a slice of `SplatPoint`s to a file in a raw binary format.
@@ -274,5 +283,74 @@ mod tests {
         p.opacity = -100.0;
         let (splat, _) = SplatPoint::from_ply(&p);
         assert_eq!(splat.color[3], 0);
+    }
+
+    #[test]
+    fn test_ply_to_splat_no_sort_preserves_order() {
+        // Create points with known positions
+        let points = vec![
+            PlyGaussian {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+            PlyGaussian {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+            PlyGaussian {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+        ];
+
+        // Without sorting, order should be preserved
+        let splats = ply_to_splat(points.clone(), false);
+        assert_eq!(splats[0].pos[0], 3.0);
+        assert_eq!(splats[1].pos[0], 1.0);
+        assert_eq!(splats[2].pos[0], 2.0);
+    }
+
+    #[test]
+    fn test_ply_to_splat_with_sort() {
+        // Create points with different importance values
+        let points = vec![
+            PlyGaussian {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+                opacity: 10.0, // High opacity -> high importance
+                scale_0: 1.0,
+                scale_1: 1.0,
+                scale_2: 1.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+            PlyGaussian {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+                opacity: -10.0, // Low opacity -> low importance
+                scale_0: 1.0,
+                scale_1: 1.0,
+                scale_2: 1.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+        ];
+
+        // With sorting, higher importance (more negative key) comes first
+        let splats = ply_to_splat(points.clone(), true);
+        // Point with x=1.0 has high opacity -> higher importance -> comes first
+        assert_eq!(splats[0].pos[0], 1.0);
+        assert_eq!(splats[1].pos[0], 2.0);
     }
 }

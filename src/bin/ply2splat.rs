@@ -15,11 +15,16 @@ struct Args {
     /// Output SPLAT file
     #[arg(short, long)]
     output: PathBuf,
+
+    /// Disable sorting of splats by importance (volume * opacity)
+    #[arg(long)]
+    no_sort: bool,
 }
 
 fn main() -> Result<()> {
     let args = Args::parse();
     let start_total = Instant::now();
+    let sort = !args.no_sort;
 
     println!("Reading PLY file: {:?}", args.input);
     let start_read = Instant::now();
@@ -31,7 +36,11 @@ fn main() -> Result<()> {
         duration_read.as_secs_f32()
     );
 
-    println!("Processing and sorting...");
+    if sort {
+        println!("Processing and sorting...");
+    } else {
+        println!("Processing (sorting disabled)...");
+    }
     let start_process = Instant::now();
 
     let pb = ProgressBar::new_spinner();
@@ -42,7 +51,7 @@ fn main() -> Result<()> {
     );
     pb.set_message("Converting...");
 
-    let splats = ply_to_splat(ply_data);
+    let splats = ply_to_splat(ply_data, sort);
 
     pb.finish_with_message("Conversion complete");
     let duration_process = start_process.elapsed();
