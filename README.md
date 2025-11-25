@@ -59,6 +59,27 @@ print(f"Converted {count} splats")
 # Convert without sorting (faster, but may affect rendering quality)
 count = ply2splat.convert("input.ply", "output.splat", sort=False)
 
+# Load PLY file and access individual splats
+data = ply2splat.load_ply_file("input.ply")
+print(f"Loaded {len(data)} splats")
+
+for splat in data:
+    print(f"Position: {splat.position}")
+    print(f"Scale: {splat.scale}")
+    print(f"Color (RGBA): {splat.color}")
+    print(f"Rotation: {splat.rotation}")
+
+# Access splats by index
+first_splat = data[0]
+last_splat = data[-1]
+
+# Load existing SPLAT file
+data = ply2splat.load_splat_file("output.splat")
+print(f"Loaded {len(data)} splats from SPLAT file")
+
+# Get raw bytes for custom processing
+raw_bytes = data.to_bytes()
+
 # Load and convert to bytes (for in-memory processing)
 data, count = ply2splat.load_and_convert("input.ply")
 print(f"Loaded {count} splats, {len(data)} bytes")
