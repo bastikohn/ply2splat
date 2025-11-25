@@ -174,6 +174,22 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     Ok(vertices.clone())
 }
 
+/// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format with sorting enabled.
+///
+/// This function performs the conversion in parallel using `rayon` and sorts the splats
+/// based on a calculated key (volume * opacity) to optimize rendering order.
+///
+/// This is a convenience wrapper around [`ply_to_splat_with_options`] with sorting enabled.
+///
+/// # Arguments
+/// * `ply_points` - A vector of raw `PlyGaussian` data.
+///
+/// # Returns
+/// A vector of `SplatPoint` structs ready for saving/rendering.
+pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
+    ply_to_splat_with_options(ply_points, true)
+}
+
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
 ///
 /// This function performs the conversion in parallel using `rayon`.
@@ -181,11 +197,11 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
 ///
 /// # Arguments
 /// * `ply_points` - A vector of raw `PlyGaussian` data.
-/// * `sort` - Whether to sort the splats by importance (volume * opacity). Defaults to true for optimal rendering.
+/// * `sort` - Whether to sort the splats by importance (volume * opacity). Pass `true` for optimal rendering order.
 ///
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
-pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
+pub fn ply_to_splat_with_options(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
     if sort {
         // Parallel convert to (SplatPoint, key)
         let mut data: Vec<(SplatPoint, f32)> = ply_points
@@ -313,7 +329,7 @@ mod tests {
         ];
 
         // Without sorting, order should be preserved
-        let splats = ply_to_splat(points.clone(), false);
+        let splats = ply_to_splat_with_options(points.clone(), false);
         assert_eq!(splats[0].pos[0], 3.0);
         assert_eq!(splats[1].pos[0], 1.0);
         assert_eq!(splats[2].pos[0], 2.0);
@@ -348,9 +364,51 @@ mod tests {
         ];
 
         // With sorting, higher importance (more negative key) comes first
-        let splats = ply_to_splat(points.clone(), true);
+        let splats = ply_to_splat_with_options(points.clone(), true);
         // Point with x=1.0 has high opacity -> higher importance -> comes first
         assert_eq!(splats[0].pos[0], 1.0);
         assert_eq!(splats[1].pos[0], 2.0);
+    }
+
+    #[test]
+    fn test_ply_to_splat_backward_compat() {
+        // Test that the original ply_to_splat function (convenience wrapper) works
+        // and sorts by default (same behavior as ply_to_splat_with_options(points, true))
+        let points = vec![
+            PlyGaussian {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+                opacity: 10.0,
+                scale_0: 1.0,
+                scale_1: 1.0,
+                scale_2: 1.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+            PlyGaussian {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+                opacity: -10.0,
+                scale_0: 1.0,
+                scale_1: 1.0,
+                scale_2: 1.0,
+                rot_0: 1.0,
+                ..Default::default()
+            },
+        ];
+
+        let splats_wrapper = ply_to_splat(points.clone());
+        let splats_explicit = ply_to_splat_with_options(points.clone(), true);
+
+        // Both should produce the same result
+        assert_eq!(splats_wrapper.len(), splats_explicit.len());
+        for (a, b) in splats_wrapper.iter().zip(splats_explicit.iter()) {
+            assert_eq!(a.pos, b.pos);
+            assert_eq!(a.scale, b.scale);
+            assert_eq!(a.color, b.color);
+            assert_eq!(a.rot, b.rot);
+        }
     }
 }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use ply2splat::{load_ply, ply_to_splat, save_splat};
+use ply2splat::{load_ply, ply_to_splat_with_options, save_splat};
 use std::path::PathBuf;
 use std::time::Instant;
 
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     );
     pb.set_message("Converting...");
 
-    let splats = ply_to_splat(ply_data, sort);
+    let splats = ply_to_splat_with_options(ply_data, sort);
 
     pb.finish_with_message("Conversion complete");
     let duration_process = start_process.elapsed();
