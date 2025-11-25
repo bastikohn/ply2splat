@@ -311,3 +311,70 @@ mod tests {
         assert_eq!(unsorted[1].pos[0], 0.0); // p2
     }
 }
+
+/// Python bindings module for ply2splat.
+///
+/// This module exposes the core functionality of the ply2splat library to Python
+/// via PyO3, allowing Python users to convert PLY files to SPLAT format.
+#[cfg(feature = "python")]
+mod python {
+    use super::*;
+    use pyo3::exceptions::PyIOError;
+    use pyo3::prelude::*;
+
+    /// Convert a Gaussian Splatting PLY file to the compact SPLAT binary format.
+    ///
+    /// Args:
+    ///     input_path: Path to the input PLY file
+    ///     output_path: Path for the output SPLAT file
+    ///     sort: Whether to sort splats by importance (default: True)
+    ///
+    /// Returns:
+    ///     The number of splats converted
+    ///
+    /// Raises:
+    ///     IOError: If the input file cannot be read or output file cannot be written
+    #[pyfunction]
+    #[pyo3(signature = (input_path, output_path, sort=true))]
+    fn convert(input_path: &str, output_path: &str, sort: bool) -> PyResult<usize> {
+        let ply_data = load_ply(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
+        let count = ply_data.len();
+        let splats = ply_to_splat(ply_data, sort);
+        save_splat(output_path, &splats).map_err(|e| PyIOError::new_err(e.to_string()))?;
+        Ok(count)
+    }
+
+    /// Load a PLY file and return splat data as bytes.
+    ///
+    /// This function loads a PLY file, converts it to SPLAT format, and returns
+    /// the raw bytes. This is useful for further processing in Python without
+    /// writing to disk.
+    ///
+    /// Args:
+    ///     input_path: Path to the input PLY file
+    ///     sort: Whether to sort splats by importance (default: True)
+    ///
+    /// Returns:
+    ///     A tuple of (bytes, count) where bytes is the raw SPLAT data and count
+    ///     is the number of splats
+    ///
+    /// Raises:
+    ///     IOError: If the input file cannot be read
+    #[pyfunction]
+    #[pyo3(signature = (input_path, sort=true))]
+    fn load_and_convert(input_path: &str, sort: bool) -> PyResult<(Vec<u8>, usize)> {
+        let ply_data = load_ply(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
+        let count = ply_data.len();
+        let splats = ply_to_splat(ply_data, sort);
+        let bytes: Vec<u8> = bytemuck::cast_slice(&splats).to_vec();
+        Ok((bytes, count))
+    }
+
+    /// A ply2splat module for converting Gaussian Splatting PLY files to SPLAT format.
+    #[pymodule]
+    fn ply2splat(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add_function(wrap_pyfunction!(convert, m)?)?;
+        m.add_function(wrap_pyfunction!(load_and_convert, m)?)?;
+        Ok(())
+    }
+}

@@ -4,3 +4,13 @@ result
 **/*.rs.bk
 test_files/
 test_cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+.eggs/
+*.whl
