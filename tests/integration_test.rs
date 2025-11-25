@@ -1,4 +1,4 @@
-use assert_cmd::{cargo, Command};
+use assert_cmd::Command;
 use ply2splat::SplatPoint;
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -6,8 +6,9 @@ use std::io::Write;
 use std::path::PathBuf;
 
 #[test]
+#[allow(deprecated)]
 fn test_cli_conversion() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::new(cargo::cargo_bin("ply2splat"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin("ply2splat"));
 
     // Create a dummy PLY file
     let mut ply_file = tempfile::NamedTempFile::new()?;
@@ -78,6 +79,7 @@ fn calculate_hash(data: &[u8]) -> String {
     hex::encode(hasher.finalize())
 }
 
+#[allow(deprecated)]
 fn run_dataset_test(
     url: &str,
     expected_input_hash: &str,
@@ -117,7 +119,7 @@ fn run_dataset_test(
     let output_path = temp_ply.path().with_extension("splat");
 
     println!("Running conversion...");
-    let mut cmd = Command::new(cargo::cargo_bin("ply2splat"));
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin("ply2splat"));
     cmd.arg("--input")
         .arg(temp_ply.path())
         .arg("--output")
@@ -158,6 +160,6 @@ fn test_dataset_drjohnson() -> Result<(), Box<dyn std::error::Error>> {
     run_dataset_test(
         "https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset/drjohnson/point_cloud/iteration_30000/point_cloud.ply?download=true",
         "92f4898839ec4ad7f197cf6c74b89918b35ea712b4e41435593ccb152d22b7f5",
-        "b231e6f05cfd6d8776d6b0fe20796a08101f0f55699a6a0edeab5b061a7be009"
+        "1fa57e61226e54c0461de1535b77cd0c5264ec8c586e9ca2ff1ff6a5ab8fd2c2"
     )
 }

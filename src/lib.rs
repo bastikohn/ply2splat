@@ -137,8 +137,14 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
         .map(|p| SplatPoint::from_ply(&p))
         .collect();
 
-    // Parallel sort by key
-    data.par_sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+    // Parallel sort by key, tie-break by position (x, y, z)
+    // This ensures deterministic output even across different platforms/architectures
+    data.par_sort_by(|a, b| {
+        a.1.total_cmp(&b.1)
+            .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+            .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+            .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
+    });
 
     // Parallel strip key
     data.into_par_iter().map(|(s, _)| s).collect()
