@@ -1,6 +1,6 @@
 # ply2splat
 
-A high-performance Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the `.splat` format.
+A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the `.splat` format.
 
 ## Features
 
