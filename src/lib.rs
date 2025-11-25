@@ -1,3 +1,15 @@
+//! # ply2splat
+//!
+//! `ply2splat` is a high-performance library and CLI tool for converting Gaussian Splatting PLY files
+//! into a compact, optimized binary format suitable for real-time rendering.
+//!
+//! ## Features
+//!
+//! - **Fast Parsing**: Uses `ply-rs` for robust PLY parsing.
+//! - **Parallel Processing**: Leverages `rayon` for multi-threaded conversion and sorting.
+//! - **Optimized Output**: Produces a dense, memory-efficient binary format (32 bytes per splat).
+//! - **Sorting**: Automatically sorts splats by importance (volume * opacity) and spatial position for deterministic rendering order.
+
 use anyhow::{Context, Result};
 use bytemuck::{Pod, Zeroable};
 use ply_rs::parser::Parser;
@@ -9,6 +21,14 @@ use std::path::Path;
 
 const SH_C0: f32 = 0.282_094_8;
 
+/// Represents a raw Gaussian Splat read from a PLY file.
+///
+/// This struct holds the properties directly as they appear in standard Gaussian Splatting PLY files.
+/// - `x`, `y`, `z`: Position
+/// - `f_dc_*`: Spherical Harmonics (DC component, representing color)
+/// - `opacity`: Logit opacity (needs sigmoid)
+/// - `scale_*`: Log-scale (needs exp)
+/// - `rot_*`: Quaternion rotation (w, x, y, z order usually, but handled as raw floats here)
 #[derive(Debug, Clone, Default)]
 pub struct PlyGaussian {
     pub x: f32,
@@ -58,13 +78,28 @@ impl PropertyAccess for PlyGaussian {
 #[derive(Debug, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct SplatPoint {
+    /// Position (x, y, z)
     pub pos: [f32; 3],
+    /// Scale (x, y, z) - already exponentiated
     pub scale: [f32; 3],
+    /// Color (R, G, B, A) - 8-bit quantization
     pub color: [u8; 4], // R, G, B, A
+    /// Rotation (Quaternion) - 8-bit quantization mapping [-1, 1] to [0, 255]
     pub rot: [u8; 4],
 }
 
 impl SplatPoint {
+    /// Converts a raw `PlyGaussian` into a `SplatPoint`.
+    ///
+    /// This process involves:
+    /// 1. Converting SH DC components to RGB colors.
+    /// 2. Applying the sigmoid activation to opacity.
+    /// 3. Applying the exponential activation to scale.
+    /// 4. Normalizing and quantizing the rotation quaternion.
+    /// 5. Packing everything into the compact 32-byte format.
+    ///
+    /// Returns a tuple of `(SplatPoint, sort_key)`, where `sort_key` is used for sorting splats
+    /// (usually by volume/opacity importance) to optimize rendering.
     pub fn from_ply(p: &PlyGaussian) -> (Self, f32) {
         // Color
         let r = ((0.5 + SH_C0 * p.f_dc_0).clamp(0.0, 1.0) * 255.0) as u8;
@@ -115,6 +150,15 @@ impl SplatPoint {
     }
 }
 
+/// Loads a PLY file and parses it into a vector of `PlyGaussian`.
+///
+/// This function uses `ply-rs` to parse the file. It specifically looks for the "vertex" element.
+///
+/// # Arguments
+/// * `path` - Path to the .ply file.
+///
+/// # Returns
+/// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
 pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     let f = File::open(path).context("Failed to open PLY file")?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
@@ -130,6 +174,16 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     Ok(vertices.clone())
 }
 
+/// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
+///
+/// This function performs the conversion in parallel using `rayon`.
+/// It also sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
+///
+/// # Arguments
+/// * `ply_points` - A vector of raw `PlyGaussian` data.
+///
+/// # Returns
+/// A vector of `SplatPoint` structs ready for saving/rendering.
 pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
     // Parallel convert to (SplatPoint, key)
     let mut data: Vec<(SplatPoint, f32)> = ply_points
@@ -150,6 +204,14 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
     data.into_par_iter().map(|(s, _)| s).collect()
 }
 
+/// Saves a slice of `SplatPoint`s to a file in a raw binary format.
+///
+/// The output file is a direct dump of the `SplatPoint` structs (32 bytes per point).
+/// This format is efficient for loading directly into GPU buffers.
+///
+/// # Arguments
+/// * `path` - Destination path.
+/// * `splats` - The data to write.
 pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> Result<()> {
     let mut f = File::create(path).context("Failed to create output file")?;
 
