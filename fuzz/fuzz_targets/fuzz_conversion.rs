@@ -1,6 +1,6 @@
 #![no_main]
 use libfuzzer_sys::fuzz_target;
-use ply2splat::{PlyGaussian, SplatPoint};
+use ply2splat::{ply_to_splat, PlyGaussian};
 use arbitrary::Arbitrary;
 
 #[derive(Arbitrary, Debug)]
@@ -10,6 +10,7 @@ struct Input {
     opacity: f32,
     scale_0: f32, scale_1: f32, scale_2: f32,
     rot_0: f32, rot_1: f32, rot_2: f32, rot_3: f32,
+    sort: bool,
 }
 
 fuzz_target!(|data: Input| {
@@ -22,5 +23,6 @@ fuzz_target!(|data: Input| {
     };
     
     // Ensure this doesn't panic even with extreme floats (NaN, Inf, etc.)
-    let _ = SplatPoint::from_ply(&p);
+    // Testing both sorting enabled and disabled based on input
+    let _ = ply_to_splat(vec![p], data.sort);
 });

@@ -177,28 +177,31 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
 ///
 /// This function performs the conversion in parallel using `rayon`.
-/// It also sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
+/// It optionally sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
 ///
 /// # Arguments
 /// * `ply_points` - A vector of raw `PlyGaussian` data.
+/// * `sort` - If true, sorts the splats by importance (volume * opacity).
 ///
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
-pub fn ply_to_splat(ply_points: Vec<PlyGaussian>) -> Vec<SplatPoint> {
+pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
     // Parallel convert to (SplatPoint, key)
     let mut data: Vec<(SplatPoint, f32)> = ply_points
         .into_par_iter()
         .map(|p| SplatPoint::from_ply(&p))
         .collect();
 
-    // Parallel sort by key, tie-break by position (x, y, z)
-    // This ensures deterministic output even across different platforms/architectures
-    data.par_sort_by(|a, b| {
-        a.1.total_cmp(&b.1)
-            .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-            .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-            .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-    });
+    if sort {
+        // Parallel sort by key, tie-break by position (x, y, z)
+        // This ensures deterministic output even across different platforms/architectures
+        data.par_sort_by(|a, b| {
+            a.1.total_cmp(&b.1)
+                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
+        });
+    }
 
     // Parallel strip key
     data.into_par_iter().map(|(s, _)| s).collect()
@@ -245,7 +248,9 @@ mod tests {
             ..Default::default()
         };
 
-        let (splat, _) = SplatPoint::from_ply(&p);
+        // Sorting disabled for this logic test
+        let splats = ply_to_splat(vec![p.clone()], false);
+        let splat = splats[0];
 
         // Opacity 0.0 -> Sigmoid(0) = 0.5 -> 127 or 128
         assert!(splat.color[3] == 127 || splat.color[3] == 128);
@@ -267,12 +272,42 @@ mod tests {
 
         // High opacity
         p.opacity = 100.0;
-        let (splat, _) = SplatPoint::from_ply(&p);
-        assert_eq!(splat.color[3], 255);
+        let splats = ply_to_splat(vec![p.clone()], false);
+        assert_eq!(splats[0].color[3], 255);
 
         // Low opacity
         p.opacity = -100.0;
-        let (splat, _) = SplatPoint::from_ply(&p);
-        assert_eq!(splat.color[3], 0);
+        let splats = ply_to_splat(vec![p.clone()], false);
+        assert_eq!(splats[0].color[3], 0);
+    }
+
+    #[test]
+    fn test_sorting_flag() {
+        let p1 = PlyGaussian {
+            x: 1.0,
+            opacity: 0.0,
+            ..Default::default()
+        }; // Should be first if sorted (low opacity/volume)
+        let p2 = PlyGaussian {
+            x: 0.0,
+            opacity: 100.0,
+            ..Default::default()
+        }; // Should be last if sorted (high opacity/volume) -> Larger key (negative)
+
+        let input = vec![p1.clone(), p2.clone()];
+
+        // With sorting: p2 should come before p1 because:
+        // Key = -(volume * opacity)
+        // p1: volume=1, opacity=0.5 -> key = -0.5
+        // p2: volume=1, opacity=1.0 -> key = -1.0
+        // Sorted: -1.0 (p2) < -0.5 (p1) -> p2 then p1
+        let sorted = ply_to_splat(input.clone(), true);
+        assert_eq!(sorted[0].pos[0], 0.0); // p2
+        assert_eq!(sorted[1].pos[0], 1.0); // p1
+
+        // Without sorting: Order preserved (p1 then p2)
+        let unsorted = ply_to_splat(input.clone(), false);
+        assert_eq!(unsorted[0].pos[0], 1.0); // p1
+        assert_eq!(unsorted[1].pos[0], 0.0); // p2
     }
 }

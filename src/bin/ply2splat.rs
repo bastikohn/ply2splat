@@ -15,6 +15,10 @@ struct Args {
     /// Output SPLAT file
     #[arg(short, long)]
     output: PathBuf,
+
+    /// Disable sorting of splats
+    #[arg(long)]
+    no_sort: bool,
 }
 
 fn main() -> Result<()> {
@@ -31,7 +35,11 @@ fn main() -> Result<()> {
         duration_read.as_secs_f32()
     );
 
-    println!("Processing and sorting...");
+    if args.no_sort {
+        println!("Processing (sorting disabled)...");
+    } else {
+        println!("Processing and sorting...");
+    }
     let start_process = Instant::now();
 
     let pb = ProgressBar::new_spinner();
@@ -42,7 +50,7 @@ fn main() -> Result<()> {
     );
     pb.set_message("Converting...");
 
-    let splats = ply_to_splat(ply_data);
+    let splats = ply_to_splat(ply_data, !args.no_sort);
 
     pb.finish_with_message("Conversion complete");
     let duration_process = start_process.elapsed();
