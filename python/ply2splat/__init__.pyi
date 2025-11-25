@@ -10,6 +10,8 @@ Example:
     >>> print(f"Converted {count} splats")
 """
 
+from typing import Tuple
+
 def convert(input_path: str, output_path: str, sort: bool = True) -> int:
     """
     Convert a Gaussian Splatting PLY file to the compact SPLAT binary format.
@@ -33,7 +35,7 @@ def convert(input_path: str, output_path: str, sort: bool = True) -> int:
     ...
 
 
-def load_and_convert(input_path: str, sort: bool = True) -> tuple[bytes, int]:
+def load_and_convert(input_path: str, sort: bool = True) -> Tuple[bytes, int]:
     """
     Load a PLY file and return splat data as bytes.
 
