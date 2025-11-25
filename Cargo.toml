@@ -1,6 +1,6 @@
 [package]
 name = "ply2splat"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 description = "A Rust crate for processing Gaussian Splatting PLY and SPLAT files"
 license = "MIT"
