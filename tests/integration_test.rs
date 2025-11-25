@@ -131,6 +131,7 @@ fn run_dataset_test(
     println!("Verifying output hash...");
     let output_content = std::fs::read(&output_path)?;
     let output_hash = calculate_hash(&output_content);
+    println!("Output hash: {}", output_hash);
 
     assert_eq!(
         output_hash, expected_output_hash,
@@ -156,6 +157,7 @@ fn download_and_cache(
 }
 
 #[test]
+#[ignore = "reason: takes too long to download and hash the file"]
 fn test_dataset_drjohnson() -> Result<(), Box<dyn std::error::Error>> {
     run_dataset_test(
         "https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset/drjohnson/point_cloud/iteration_30000/point_cloud.ply?download=true",
