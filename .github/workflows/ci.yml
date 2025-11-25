@@ -20,6 +20,11 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
     - name: Build
       run: cargo build --verbose
+    - name: Cache Test Data
+      uses: actions/cache@v3
+      with:
+        path: test_cache
+        key: test-data-${{ hashFiles('tests/integration_test.rs') }}
     - name: Run tests
       run: cargo test --verbose
   

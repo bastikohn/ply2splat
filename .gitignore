@@ -2,3 +2,5 @@ target/
 .direnv
 result
 **/*.rs.bk
+test_files/
+test_cache/
