@@ -65,6 +65,72 @@ fn test_splat_struct_layout() {
     assert_eq!(std::mem::align_of::<SplatPoint>(), 4);
 }
 
+#[test]
+#[allow(deprecated)]
+fn test_cli_no_sort_flag() -> Result<(), Box<dyn std::error::Error>> {
+    // Create a dummy PLY file
+    let mut ply_file = tempfile::NamedTempFile::new()?;
+    writeln!(ply_file, "ply")?;
+    writeln!(ply_file, "format ascii 1.0")?;
+    writeln!(ply_file, "element vertex 2")?;
+    writeln!(ply_file, "property float x")?;
+    writeln!(ply_file, "property float y")?;
+    writeln!(ply_file, "property float z")?;
+    writeln!(ply_file, "property float f_dc_0")?;
+    writeln!(ply_file, "property float f_dc_1")?;
+    writeln!(ply_file, "property float f_dc_2")?;
+    writeln!(ply_file, "property float opacity")?;
+    writeln!(ply_file, "property float scale_0")?;
+    writeln!(ply_file, "property float scale_1")?;
+    writeln!(ply_file, "property float scale_2")?;
+    writeln!(ply_file, "property float rot_0")?;
+    writeln!(ply_file, "property float rot_1")?;
+    writeln!(ply_file, "property float rot_2")?;
+    writeln!(ply_file, "property float rot_3")?;
+    writeln!(ply_file, "end_header")?;
+    // Point 1 (lower importance)
+    writeln!(
+        ply_file,
+        "0.0 0.0 0.0 0.5 0.5 0.5 -10.0 0.1 0.1 0.1 1.0 0.0 0.0 0.0"
+    )?;
+    // Point 2 (higher importance)
+    writeln!(
+        ply_file,
+        "1.0 1.0 1.0 0.1 0.1 0.1 10.0 0.2 0.2 0.2 1.0 0.0 0.0 0.0"
+    )?;
+
+    let output_path_sorted = ply_file.path().with_extension("sorted.splat");
+    let output_path_unsorted = ply_file.path().with_extension("unsorted.splat");
+
+    // Run with sorting (default)
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin("ply2splat"));
+    cmd.arg("--input")
+        .arg(ply_file.path())
+        .arg("--output")
+        .arg(&output_path_sorted);
+    cmd.assert().success();
+
+    // Run without sorting
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin("ply2splat"));
+    cmd.arg("--input")
+        .arg(ply_file.path())
+        .arg("--output")
+        .arg(&output_path_unsorted)
+        .arg("--no-sort");
+    cmd.assert().success();
+
+    // Verify outputs have correct size
+    let sorted_content = std::fs::read(&output_path_sorted)?;
+    let unsorted_content = std::fs::read(&output_path_unsorted)?;
+    assert_eq!(sorted_content.len(), 64);
+    assert_eq!(unsorted_content.len(), 64);
+
+    // Outputs should differ since sorting changes order
+    assert_ne!(sorted_content, unsorted_content);
+
+    Ok(())
+}
+
 fn get_cache_dir() -> PathBuf {
     let cache_dir = PathBuf::from("test_cache");
     if !cache_dir.exists() {
