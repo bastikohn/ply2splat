@@ -1,4 +1,4 @@
-use assert_cmd::Command;
+use assert_cmd::{Command, cargo};
 use std::io::Write;
 use ply2splat::SplatPoint;
 use sha2::{Sha256, Digest};
@@ -7,7 +7,7 @@ use std::fs;
 
 #[test]
 fn test_cli_conversion() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cmd = Command::cargo_bin("ply2splat")?;
+    let mut cmd = Command::new(cargo::cargo_bin("ply2splat"));
 
     // Create a dummy PLY file
     let mut ply_file = tempfile::NamedTempFile::new()?;
@@ -104,7 +104,7 @@ fn run_dataset_test(url: &str, expected_input_hash: &str, expected_output_hash: 
     let output_path = temp_ply.path().with_extension("splat");
 
     println!("Running conversion...");
-    let mut cmd = Command::cargo_bin("ply2splat")?;
+    let mut cmd = Command::new(cargo::cargo_bin("ply2splat"));
     cmd.arg("--input")
         .arg(temp_ply.path())
         .arg("--output")
