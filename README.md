@@ -10,6 +10,22 @@ A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the 
 
 Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](https://pypi.org/project/ply2splat/) for Python, and [npm](https://www.npmjs.com/package/ply2splat) for JavaScript/TypeScript.
 
+## Workspace Architecture
+
+This repository is organized as a Cargo workspace with multiple crates:
+
+```
+crates/
+├── ply2splat-core/    # Core library - business logic only
+├── ply2splat-cli/     # CLI tool
+├── ply2splat-wasm/    # WASM bindings for browser/Node.js
+├── ply2splat-napi/    # Native Node.js bindings via NAPI-RS
+└── ply2splat-python/  # Python bindings via PyO3
+
+packages/
+└── ply2splat/         # Unified npm package (WASM + optional native)
+```
+
 ## Features
 
 - **High Performance**: Utilizes parallel processing (via `rayon`) for conversion and sorting.
@@ -17,22 +33,24 @@ Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](ht
 - **Correctness**: Implements the standard conversion logic including Spherical Harmonics (SH) to color conversion and geometric transformations.
 - **Python Bindings**: Use the library directly from Python via PyO3.
 - **WebAssembly Support**: Run in browsers and Node.js via the npm package.
+- **Native Node.js Bindings**: For maximum performance via NAPI-RS.
 
 ## Installation
 
 ### Rust Crate
 
-Add `ply2splat` to your `Cargo.toml`:
+Add `ply2splat-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ply2splat = "0.1"
+ply2splat-core = "0.2"
 ```
 
-Or install via cargo:
+Or use the re-exporting crate for backward compatibility:
 
-```bash
-cargo add ply2splat
+```toml
+[dependencies]
+ply2splat = "0.2"
 ```
 
 ### CLI
@@ -40,7 +58,7 @@ cargo add ply2splat
 Install the CLI tool directly from [crates.io](https://crates.io/crates/ply2splat):
 
 ```bash
-cargo install ply2splat
+cargo install ply2splat-cli
 ```
 
 Or build from source:
@@ -270,7 +288,11 @@ function toUint8Array(input: PlyInput): Promise<Uint8Array>;
 ### Running Tests
 
 ```bash
-cargo test
+# Test the entire workspace
+cargo test --workspace
+
+# Test a specific crate
+cargo test -p ply2splat-core
 ```
 
 ### Building WASM
@@ -280,10 +302,22 @@ cargo test
 cargo install wasm-pack
 
 # Build for web (browsers)
-wasm-pack build --target web --features wasm
+wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build --target bundler --features wasm
+wasm-pack build crates/ply2splat-wasm --target bundler --out-dir ../../packages/ply2splat/wasm
+```
+
+### Building the npm Package
+
+```bash
+# Build WASM first
+wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+
+# Build TypeScript
+cd packages/ply2splat
+npm install
+npm run build
 ```
 
 ### Fuzzing

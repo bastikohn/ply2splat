@@ -1,3 +1,23 @@
+[workspace]
+members = [
+    "crates/ply2splat-core",
+    "crates/ply2splat-cli",
+    "crates/ply2splat-wasm",
+    "crates/ply2splat-python",
+    "crates/ply2splat-napi",
+]
+resolver = "2"
+
+default-members = ["crates/ply2splat-cli"]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/bastikohn/ply2splat"
+
+# Legacy package configuration for backward compatibility
+# The actual library is now in crates/ply2splat-core
 [package]
 name = "ply2splat"
 version = "0.2.0"
@@ -20,38 +40,13 @@ exclude = [
     "AGENTS.md",
 ]
 
-# WASM package metadata
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
-
 [lib]
 name = "ply2splat"
 path = "src/lib.rs"
-crate-type = ["lib", "cdylib"]
 
-[[bin]]
-name = "ply2splat"
-path = "src/bin/ply2splat.rs"
-
-[features]
-default = []
-python = ["pyo3"]
-wasm = ["wasm-bindgen", "js-sys"]
-
+# Re-export from the core crate for backward compatibility
 [dependencies]
-ply-rs = "0.1"
-clap = { version = "4.4", features = ["derive"] }
-anyhow = "1.0"
-bytemuck = { version = "1.14", features = ["derive"] }
-rayon = "1.8"
-indicatif = "0.18.3"
-memmap2 = "0.9"
-pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
-wasm-bindgen = { version = "0.2.105", optional = true }
-js-sys = { version = "0.3", optional = true }
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-# Rayon doesn't work in WASM, so we don't include it for wasm32
+ply2splat-core = { path = "crates/ply2splat-core", features = ["parallel"] }
 
 [dev-dependencies]
 tempfile = "3.8"

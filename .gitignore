@@ -19,7 +19,13 @@ dist/
 pkg/
 pkg-nodejs/
 
-# JavaScript/TypeScript
-js-src/node_modules/
-js-src/package-lock.json
-js-src/ply2splat.d.ts
+# JavaScript/TypeScript - npm packages
+packages/*/node_modules/
+packages/*/dist/
+packages/*/wasm/
+packages/*/*.tsbuildinfo
+node_modules/
+package-lock.json
+
+# Cargo lock for workspace
+Cargo.lock

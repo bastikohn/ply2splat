@@ -28,55 +28,23 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build WASM (web target)
-        run: wasm-pack build --target web --features wasm
-      - name: Build TypeScript helpers
+        run: wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+      - name: Build npm package TypeScript
         run: |
-          cd js-src
-          # Copy the generated type declarations for TypeScript compilation
-          cp ../pkg/ply2splat.d.ts .
+          cd packages/ply2splat
           npm install
-          npx tsc
-      - name: Update package.json with helpers
-        run: |
-          cd pkg
-          # Add helpers.js and helpers.d.ts to the files array
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-            pkg.files = [...new Set([...pkg.files, 'helpers.js', 'helpers.d.ts', 'helpers.d.ts.map', 'helpers.js.map'])];
-            pkg.exports = {
-              '.': {
-                'types': './ply2splat.d.ts',
-                'import': './ply2splat.js',
-                'default': './ply2splat.js'
-              },
-              './helpers': {
-                'types': './helpers.d.ts',
-                'import': './helpers.js',
-                'default': './helpers.js'
-              }
-            };
-            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
-          "
-          echo "Updated package.json:"
-          cat package.json
+          npm run build
       - name: Verify package contents
         run: |
           echo "Package contents:"
-          ls -la pkg/
-          if [ ! -f pkg/helpers.js ]; then
-            echo "Error: helpers.js not found"
-            exit 1
-          fi
-          if [ ! -f pkg/helpers.d.ts ]; then
-            echo "Error: helpers.d.ts not found"
-            exit 1
-          fi
-      - name: Upload WASM artifact
+          ls -la packages/ply2splat/
+          ls -la packages/ply2splat/wasm/
+          ls -la packages/ply2splat/dist/
+      - name: Upload npm package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ply2splat-wasm
-          path: pkg/
+          name: ply2splat-npm
+          path: packages/ply2splat/
 
   test-wasm:
     name: Test WASM in Node.js
@@ -88,32 +56,25 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Download WASM artifact
+      - name: Download npm package artifact
         uses: actions/download-artifact@v4
         with:
-          name: ply2splat-wasm
-          path: pkg/
+          name: ply2splat-npm
+          path: packages/ply2splat/
       - name: Verify artifact contents
         run: |
           echo "Downloaded artifact contents:"
-          ls -la pkg/
-          if [ ! -f pkg/package.json ]; then
-            echo "Error: package.json not found in artifact"
-            exit 1
-          fi
-          if [ ! -f pkg/helpers.js ]; then
-            echo "Error: helpers.js not found in artifact"
-            exit 1
-          fi
+          ls -la packages/ply2splat/
+          ls -la packages/ply2splat/wasm/
       - name: Test WASM module loads and converts
         run: |
           node -e "
             const fs = require('fs');
 
             async function test() {
-              const wasmCode = fs.readFileSync('./ply2splat_bg.wasm');
+              const wasmCode = fs.readFileSync('./wasm/ply2splat_wasm_bg.wasm');
               const wasmModule = await WebAssembly.compile(wasmCode);
-              const { initSync, convert, getSplatCount, parseSplatData } = await import('./ply2splat.js');
+              const { initSync, convert, getSplatCount, parseSplatData } = await import('./wasm/ply2splat_wasm.js');
               initSync(wasmModule);
               console.log('WASM module loaded successfully');
 
@@ -153,7 +114,7 @@ jobs:
 
             test().catch(err => { console.error(err); process.exit(1); });
           "
-        working-directory: pkg
+        working-directory: packages/ply2splat
 
   publish-npm:
     name: Publish to npm
@@ -167,21 +128,21 @@ jobs:
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      - name: Download WASM artifact
+      - name: Download npm package artifact
         uses: actions/download-artifact@v4
         with:
-          name: ply2splat-wasm
-          path: pkg/
+          name: ply2splat-npm
+          path: packages/ply2splat/
       - name: Verify package before publish
         run: |
-          if [ ! -f pkg/package.json ]; then
+          if [ ! -f packages/ply2splat/package.json ]; then
             echo "Error: package.json not found"
             exit 1
           fi
           echo "Publishing package:"
-          cat pkg/package.json
+          cat packages/ply2splat/package.json
       - name: Publish to npm
         run: npm publish --access public
-        working-directory: pkg
+        working-directory: packages/ply2splat
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

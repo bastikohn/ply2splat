@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use ply2splat::{load_ply, ply_to_splat, save_splat};
+use ply2splat_core::{load_ply, ply_to_splat, save_splat};
 use std::path::PathBuf;
 use std::time::Instant;
 

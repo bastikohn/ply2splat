@@ -31,4 +31,4 @@ Homepage = "https://github.com/bastikohn/ply2splat"
 Repository = "https://github.com/bastikohn/ply2splat"
 
 [tool.maturin]
-features = ["python"]
+manifest-path = "crates/ply2splat-python/Cargo.toml"

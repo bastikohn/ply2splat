@@ -1,0 +1,19 @@
+[package]
+name = "ply2splat-python"
+version = "0.2.0"
+edition = "2021"
+description = "Python bindings for Gaussian Splatting PLY to SPLAT conversion"
+license = "MIT"
+readme = "../../README.md"
+repository = "https://github.com/bastikohn/ply2splat"
+keywords = ["graphics", "gaussian-splatting", "python", "pyo3"]
+categories = ["multimedia::encoding"]
+
+[lib]
+name = "ply2splat"
+crate-type = ["cdylib"]
+
+[dependencies]
+ply2splat-core = { path = "../ply2splat-core", features = ["parallel"] }
+pyo3 = { version = "0.23", features = ["extension-module"] }
+bytemuck = { version = "1.14", features = ["derive"] }
