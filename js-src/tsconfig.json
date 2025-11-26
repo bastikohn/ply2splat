@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ES2020",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "../pkg",
+    "rootDir": ".",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2020", "DOM"],
+    "types": ["node"],
+    "paths": {
+      "./ply2splat.js": ["../pkg/ply2splat.js"]
+    },
+    "baseUrl": "."
+  },
+  "include": ["helpers.ts"],
+  "exclude": ["node_modules"]
+}

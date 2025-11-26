@@ -21,20 +21,57 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build WASM (web target)
         run: wasm-pack build --target web --features wasm
-      - name: Verify package.json exists
+      - name: Build TypeScript helpers
         run: |
-          if [ ! -f pkg/package.json ]; then
-            echo "Error: pkg/package.json not found after wasm-pack build"
-            exit 1
-          fi
+          cd js-src
+          # Copy the generated type declarations for TypeScript compilation
+          cp ../pkg/ply2splat.d.ts .
+          npm install typescript @types/node --save-dev
+          npx tsc
+      - name: Update package.json with helpers
+        run: |
+          cd pkg
+          # Add helpers.js and helpers.d.ts to the files array
+          node -e "
+            const fs = require('fs');
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+            pkg.files = [...new Set([...pkg.files, 'helpers.js', 'helpers.d.ts', 'helpers.d.ts.map', 'helpers.js.map'])];
+            pkg.exports = {
+              '.': {
+                'types': './ply2splat.d.ts',
+                'import': './ply2splat.js',
+                'default': './ply2splat.js'
+              },
+              './helpers': {
+                'types': './helpers.d.ts',
+                'import': './helpers.js',
+                'default': './helpers.js'
+              }
+            };
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+          "
+          echo "Updated package.json:"
+          cat package.json
+      - name: Verify package contents
+        run: |
           echo "Package contents:"
           ls -la pkg/
-          echo "package.json:"
-          cat pkg/package.json
+          if [ ! -f pkg/helpers.js ]; then
+            echo "Error: helpers.js not found"
+            exit 1
+          fi
+          if [ ! -f pkg/helpers.d.ts ]; then
+            echo "Error: helpers.d.ts not found"
+            exit 1
+          fi
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v4
         with:
@@ -62,6 +99,10 @@ jobs:
           ls -la pkg/
           if [ ! -f pkg/package.json ]; then
             echo "Error: package.json not found in artifact"
+            exit 1
+          fi
+          if [ ! -f pkg/helpers.js ]; then
+            echo "Error: helpers.js not found in artifact"
             exit 1
           fi
       - name: Test WASM module loads and converts

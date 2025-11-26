@@ -18,3 +18,8 @@ dist/
 # WASM build artifacts
 pkg/
 pkg-nodejs/
+
+# JavaScript/TypeScript
+js-src/node_modules/
+js-src/package-lock.json
+js-src/ply2splat.d.ts
