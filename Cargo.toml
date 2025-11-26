@@ -1,6 +1,6 @@
 [package]
 name = "ply2splat"
-version = "0.1.3"
+version = "0.2.0"
 edition = "2021"
 description = "A Rust crate for processing Gaussian Splatting PLY and SPLAT files"
 license = "MIT"
@@ -8,7 +8,17 @@ readme = "README.md"
 repository = "https://github.com/bastikohn/ply2splat"
 keywords = ["graphics", "gaussian-splatting", "ply", "splat", "3d"]
 categories = ["command-line-utilities", "multimedia::encoding"]
-exclude = ["test_cache", "test_files", ".github", ".devcontainer", "flake.nix", "flake.lock", ".envrc", "fuzz", "AGENTS.md"]
+exclude = [
+    "test_cache",
+    "test_files",
+    ".github",
+    ".devcontainer",
+    "flake.nix",
+    "flake.lock",
+    ".envrc",
+    "fuzz",
+    "AGENTS.md",
+]
 
 [lib]
 name = "ply2splat"
