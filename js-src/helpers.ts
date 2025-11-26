@@ -343,7 +343,8 @@ export async function convertFromFormData(
  * ```
  */
 export function createSplatBlob(splatData: Uint8Array): Blob {
-  return new Blob([splatData.slice().buffer], { type: 'application/octet-stream' });
+  // Use slice() to create a proper copy of the data for the Blob
+  return new Blob([splatData.slice()], { type: 'application/octet-stream' });
 }
 
 /**

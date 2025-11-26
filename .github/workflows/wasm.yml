@@ -34,7 +34,7 @@ jobs:
           cd js-src
           # Copy the generated type declarations for TypeScript compilation
           cp ../pkg/ply2splat.d.ts .
-          npm install typescript @types/node --save-dev
+          npm install
           npx tsc
       - name: Update package.json with helpers
         run: |
