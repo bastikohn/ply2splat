@@ -9,7 +9,8 @@
 //! ## Features
 //!
 //! - **Fast Parsing**: Uses `ply-rs` for robust PLY parsing.
-//! - **Parallel Processing**: Leverages `rayon` for multi-threaded conversion and sorting.
+//! - **Parallel Processing**: Leverages `rayon` for multi-threaded conversion and sorting
+//!   (enabled by default via the `parallel` feature in `ply2splat-core`).
 //! - **Optimized Output**: Produces a dense, memory-efficient binary format (32 bytes per splat).
 //! - **Sorting**: Automatically sorts splats by importance (volume * opacity) and spatial position for deterministic rendering order.
 

@@ -298,7 +298,7 @@ export async function convertFromFormData(
     throw new Error(`No file found in FormData field '${fieldName}'`);
   }
   if (!(file instanceof Blob)) {
-    throw new Error(`FormData field '${fieldName}' is not a file`);
+    throw new Error(`FormData field '${fieldName}' is not a Blob or File`);
   }
   return convertFromBlob(file, options);
 }
