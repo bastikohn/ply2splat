@@ -1,6 +1,13 @@
 # ply2splat
 
+[![Crates.io](https://img.shields.io/crates/v/ply2splat.svg)](https://crates.io/crates/ply2splat)
+[![docs.rs](https://docs.rs/ply2splat/badge.svg)](https://docs.rs/ply2splat)
+[![PyPI](https://img.shields.io/pypi/v/ply2splat.svg)](https://pypi.org/project/ply2splat/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the `.splat` format.
+
+Available on [crates.io](https://crates.io/crates/ply2splat) for Rust and [PyPI](https://pypi.org/project/ply2splat/) for Python.
 
 ## Features
 
@@ -11,7 +18,30 @@ A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the 
 
 ## Installation
 
-### CLI (From Source)
+### Rust Crate
+
+Add `ply2splat` to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ply2splat = "0.1"
+```
+
+Or install via cargo:
+
+```bash
+cargo add ply2splat
+```
+
+### CLI
+
+Install the CLI tool directly from [crates.io](https://crates.io/crates/ply2splat):
+
+```bash
+cargo install ply2splat
+```
+
+Or build from source:
 
 ```bash
 git clone https://github.com/bastikohn/ply2splat.git
@@ -23,7 +53,13 @@ The binary will be available at `target/release/ply2splat`.
 
 ### Python Package
 
-Install from source using [maturin](https://github.com/PyO3/maturin):
+Install from [PyPI](https://pypi.org/project/ply2splat/):
+
+```bash
+pip install ply2splat
+```
+
+Or install from source using [maturin](https://github.com/PyO3/maturin):
 
 ```bash
 pip install maturin
