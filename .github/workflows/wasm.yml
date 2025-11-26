@@ -25,6 +25,16 @@ jobs:
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build WASM (web target)
         run: wasm-pack build --target web --features wasm
+      - name: Verify package.json exists
+        run: |
+          if [ ! -f pkg/package.json ]; then
+            echo "Error: pkg/package.json not found after wasm-pack build"
+            exit 1
+          fi
+          echo "Package contents:"
+          ls -la pkg/
+          echo "package.json:"
+          cat pkg/package.json
       - name: Upload WASM artifact
         uses: actions/upload-artifact@v4
         with:
@@ -46,9 +56,14 @@ jobs:
         with:
           name: ply2splat-wasm
           path: pkg/
-      - name: Install dependencies
-        run: npm install
-        working-directory: pkg
+      - name: Verify artifact contents
+        run: |
+          echo "Downloaded artifact contents:"
+          ls -la pkg/
+          if [ ! -f pkg/package.json ]; then
+            echo "Error: package.json not found in artifact"
+            exit 1
+          fi
       - name: Test WASM module loads
         run: |
           node -e "
@@ -80,6 +95,14 @@ jobs:
         with:
           name: ply2splat-wasm
           path: pkg/
+      - name: Verify package before publish
+        run: |
+          if [ ! -f pkg/package.json ]; then
+            echo "Error: package.json not found"
+            exit 1
+          fi
+          echo "Publishing package:"
+          cat pkg/package.json
       - name: Publish to npm
         run: npm publish --access public
         working-directory: pkg

@@ -760,6 +760,10 @@ mod wasm {
         /// - Scale: 3 x f32 (12 bytes)
         /// - Color: 4 x u8 RGBA (4 bytes)
         /// - Rotation: 4 x u8 quaternion (4 bytes)
+        ///
+        /// Note: This clones the data on each access. This is intentional for WASM interop
+        /// since wasm-bindgen doesn't support returning references to internal data.
+        /// For large files, consider caching the result on the JavaScript side.
         #[wasm_bindgen(getter)]
         pub fn data(&self) -> Vec<u8> {
             self.data.clone()
