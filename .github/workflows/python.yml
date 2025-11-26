@@ -14,7 +14,7 @@ env:
 jobs:
   # Build and test Python wheels on Linux, macOS, and Windows
   python-build:
-    name: Build Python Wheel
+    name: Build Python Wheel (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -48,21 +48,21 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Build wheel
+      - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i python3.12
+          args: --release --out dist -i 3.9 3.10 3.11 3.12 3.13
           manylinux: auto
 
       - name: Test wheel
         if: matrix.test
         shell: bash
         run: |
-          pip install dist/*.whl
+          pip install --find-links dist ply2splat
           python -c "import ply2splat; print(dir(ply2splat))"
 
-      - name: Upload wheel
+      - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.target }}
