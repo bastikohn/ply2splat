@@ -20,6 +20,10 @@ exclude = [
     "AGENTS.md",
 ]
 
+# WASM package metadata
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
 [lib]
 name = "ply2splat"
 path = "src/lib.rs"
@@ -32,6 +36,7 @@ path = "src/bin/ply2splat.rs"
 [features]
 default = []
 python = ["pyo3"]
+wasm = ["wasm-bindgen", "js-sys"]
 
 [dependencies]
 ply-rs = "0.1"
@@ -42,6 +47,11 @@ rayon = "1.8"
 indicatif = "0.18.3"
 memmap2 = "0.9"
 pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
+wasm-bindgen = { version = "0.2.105", optional = true }
+js-sys = { version = "0.3", optional = true }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+# Rayon doesn't work in WASM, so we don't include it for wasm32
 
 [dev-dependencies]
 tempfile = "3.8"

@@ -6,17 +6,23 @@
 //! ## Features
 //!
 //! - **Fast Parsing**: Uses `ply-rs` for robust PLY parsing.
-//! - **Parallel Processing**: Leverages `rayon` for multi-threaded conversion and sorting.
+//! - **Parallel Processing**: Leverages `rayon` for multi-threaded conversion and sorting (native only).
 //! - **Optimized Output**: Produces a dense, memory-efficient binary format (32 bytes per splat).
 //! - **Sorting**: Automatically sorts splats by importance (volume * opacity) and spatial position for deterministic rendering order.
+//! - **WASM Support**: Can be compiled to WebAssembly for use in browsers and Node.js.
 
 use anyhow::{Context, Result};
 use bytemuck::{Pod, Zeroable};
 use ply_rs::parser::Parser;
 use ply_rs::ply::{Property, PropertyAccess};
+#[cfg(not(target_arch = "wasm32"))]
 use rayon::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
+use std::io::Cursor;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::{BufReader, Write};
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 const SH_C0: f32 = 0.282_094_8;
@@ -150,6 +156,30 @@ impl SplatPoint {
     }
 }
 
+/// Loads PLY data from a byte slice and parses it into a vector of `PlyGaussian`.
+///
+/// This function is useful for WASM environments where file I/O is not available,
+/// or when working with PLY data already in memory.
+///
+/// # Arguments
+/// * `data` - A byte slice containing PLY file data.
+///
+/// # Returns
+/// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
+pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
+    let mut cursor = Cursor::new(data);
+    let parser = Parser::<PlyGaussian>::new();
+    let ply = parser
+        .read_ply(&mut cursor)
+        .context("Failed to parse PLY data")?;
+
+    let vertices = ply
+        .payload
+        .get("vertex")
+        .context("PLY data has no 'vertex' element")?;
+    Ok(vertices.clone())
+}
+
 /// Loads a PLY file and parses it into a vector of `PlyGaussian`.
 ///
 /// This function uses `ply-rs` to parse the file. It specifically looks for the "vertex" element.
@@ -159,6 +189,7 @@ impl SplatPoint {
 ///
 /// # Returns
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     let f = File::open(path).context("Failed to open PLY file")?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
@@ -176,7 +207,7 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
 
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
 ///
-/// This function performs the conversion in parallel using `rayon`.
+/// This function performs the conversion in parallel using `rayon` (on native targets).
 /// It optionally sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
 ///
 /// # Arguments
@@ -185,6 +216,7 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
 ///
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
     // Parallel convert to (SplatPoint, key)
     let mut data: Vec<(SplatPoint, f32)> = ply_points
@@ -207,6 +239,40 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
     data.into_par_iter().map(|(s, _)| s).collect()
 }
 
+/// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
+///
+/// This is a single-threaded version for WASM targets where rayon is not available.
+/// It optionally sorts the splats based on a calculated key (volume * opacity) to optimize rendering order.
+///
+/// # Arguments
+/// * `ply_points` - A vector of raw `PlyGaussian` data.
+/// * `sort` - If true, sorts the splats by importance (volume * opacity).
+///
+/// # Returns
+/// A vector of `SplatPoint` structs ready for saving/rendering.
+#[cfg(target_arch = "wasm32")]
+pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
+    // Single-threaded convert to (SplatPoint, key)
+    let mut data: Vec<(SplatPoint, f32)> = ply_points
+        .into_iter()
+        .map(|p| SplatPoint::from_ply(&p))
+        .collect();
+
+    if sort {
+        // Single-threaded sort by key, tie-break by position (x, y, z)
+        // This ensures deterministic output even across different platforms/architectures
+        data.sort_by(|a, b| {
+            a.1.total_cmp(&b.1)
+                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
+        });
+    }
+
+    // Strip key
+    data.into_iter().map(|(s, _)| s).collect()
+}
+
 /// Saves a slice of `SplatPoint`s to a file in a raw binary format.
 ///
 /// The output file is a direct dump of the `SplatPoint` structs (32 bytes per point).
@@ -215,6 +281,7 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
 /// # Arguments
 /// * `path` - Destination path.
 /// * `splats` - The data to write.
+#[cfg(not(target_arch = "wasm32"))]
 pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> Result<()> {
     let mut f = File::create(path).context("Failed to create output file")?;
 
@@ -225,6 +292,21 @@ pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> Result<()> 
 
     f.flush()?;
     Ok(())
+}
+
+/// Converts a slice of `SplatPoint`s to raw bytes.
+///
+/// This function returns a Vec<u8> containing the binary representation of the splats.
+/// Each splat is exactly 32 bytes. This is useful for WASM environments where you
+/// want to return the data to JavaScript.
+///
+/// # Arguments
+/// * `splats` - The splat data to convert.
+///
+/// # Returns
+/// A `Vec<u8>` containing the raw splat data.
+pub fn splats_to_bytes(splats: &[SplatPoint]) -> Vec<u8> {
+    bytemuck::cast_slice(splats).to_vec()
 }
 
 #[cfg(test)]
@@ -309,6 +391,96 @@ mod tests {
         let unsorted = ply_to_splat(input.clone(), false);
         assert_eq!(unsorted[0].pos[0], 1.0); // p1
         assert_eq!(unsorted[1].pos[0], 0.0); // p2
+    }
+
+    #[test]
+    fn test_load_ply_from_bytes() {
+        // Create a minimal PLY file in memory
+        let ply_content = b"ply
+format ascii 1.0
+element vertex 1
+property float x
+property float y
+property float z
+property float f_dc_0
+property float f_dc_1
+property float f_dc_2
+property float opacity
+property float scale_0
+property float scale_1
+property float scale_2
+property float rot_0
+property float rot_1
+property float rot_2
+property float rot_3
+end_header
+1.0 2.0 3.0 0.5 0.5 0.5 0.0 0.1 0.1 0.1 1.0 0.0 0.0 0.0
+";
+
+        let result = load_ply_from_bytes(ply_content);
+        assert!(result.is_ok());
+
+        let gaussians = result.unwrap();
+        assert_eq!(gaussians.len(), 1);
+        assert_eq!(gaussians[0].x, 1.0);
+        assert_eq!(gaussians[0].y, 2.0);
+        assert_eq!(gaussians[0].z, 3.0);
+    }
+
+    #[test]
+    fn test_splats_to_bytes() {
+        let splat = SplatPoint {
+            pos: [1.0, 2.0, 3.0],
+            scale: [0.1, 0.2, 0.3],
+            color: [255, 128, 64, 200],
+            rot: [255, 128, 128, 128],
+        };
+
+        let bytes = splats_to_bytes(&[splat]);
+
+        // Each splat is 32 bytes
+        assert_eq!(bytes.len(), 32);
+
+        // Verify round-trip
+        let recovered: &[SplatPoint] = bytemuck::cast_slice(&bytes);
+        assert_eq!(recovered.len(), 1);
+        assert_eq!(recovered[0].pos[0], 1.0);
+        assert_eq!(recovered[0].color[0], 255);
+    }
+
+    #[test]
+    fn test_full_conversion_from_bytes() {
+        // Create a PLY file and convert it entirely from bytes
+        let ply_content = b"ply
+format ascii 1.0
+element vertex 2
+property float x
+property float y
+property float z
+property float f_dc_0
+property float f_dc_1
+property float f_dc_2
+property float opacity
+property float scale_0
+property float scale_1
+property float scale_2
+property float rot_0
+property float rot_1
+property float rot_2
+property float rot_3
+end_header
+0.0 0.0 0.0 0.5 0.5 0.5 1.0 0.1 0.1 0.1 1.0 0.0 0.0 0.0
+1.0 1.0 1.0 0.1 0.1 0.1 0.5 0.2 0.2 0.2 0.0 1.0 0.0 0.0
+";
+
+        let gaussians = load_ply_from_bytes(ply_content).expect("Failed to parse PLY");
+        assert_eq!(gaussians.len(), 2);
+
+        let splats = ply_to_splat(gaussians, true);
+        assert_eq!(splats.len(), 2);
+
+        let bytes = splats_to_bytes(&splats);
+        assert_eq!(bytes.len(), 64); // 2 splats * 32 bytes
     }
 }
 
@@ -558,5 +730,143 @@ mod python {
         m.add_function(wrap_pyfunction!(load_ply_file, m)?)?;
         m.add_function(wrap_pyfunction!(load_splat_file, m)?)?;
         Ok(())
+    }
+}
+
+/// WebAssembly bindings module for ply2splat.
+///
+/// This module exposes the core functionality of the ply2splat library to JavaScript
+/// via wasm-bindgen, allowing browser and Node.js users to convert PLY data to SPLAT format.
+#[cfg(feature = "wasm")]
+mod wasm {
+    use super::*;
+    use wasm_bindgen::prelude::*;
+
+    /// Result of a PLY to SPLAT conversion.
+    ///
+    /// Contains the converted SPLAT data as raw bytes and the number of splats.
+    #[wasm_bindgen]
+    pub struct ConversionResult {
+        data: Vec<u8>,
+        count: usize,
+    }
+
+    #[wasm_bindgen]
+    impl ConversionResult {
+        /// Get the converted SPLAT data as a byte array.
+        ///
+        /// Each splat is exactly 32 bytes in the format:
+        /// - Position: 3 x f32 (12 bytes)
+        /// - Scale: 3 x f32 (12 bytes)
+        /// - Color: 4 x u8 RGBA (4 bytes)
+        /// - Rotation: 4 x u8 quaternion (4 bytes)
+        #[wasm_bindgen(getter)]
+        pub fn data(&self) -> Vec<u8> {
+            self.data.clone()
+        }
+
+        /// Get the number of splats in the result.
+        #[wasm_bindgen(getter)]
+        pub fn count(&self) -> usize {
+            self.count
+        }
+    }
+
+    /// Convert PLY data (as bytes) to SPLAT format.
+    ///
+    /// This is the main entry point for WASM usage. Pass PLY file contents as a Uint8Array
+    /// and receive the converted SPLAT data back.
+    ///
+    /// @param ply_data - PLY file contents as a Uint8Array
+    /// @param sort - Whether to sort splats by importance (volume * opacity). Default: true
+    /// @returns ConversionResult containing the SPLAT data and count
+    /// @throws Error if the PLY data is invalid or cannot be parsed
+    #[wasm_bindgen(js_name = convert)]
+    pub fn wasm_convert(ply_data: &[u8], sort: Option<bool>) -> Result<ConversionResult, JsValue> {
+        let sort = sort.unwrap_or(true);
+
+        let ply_points = load_ply_from_bytes(ply_data)
+            .map_err(|e| JsValue::from_str(&format!("Failed to parse PLY data: {}", e)))?;
+
+        let count = ply_points.len();
+        let splats = ply_to_splat(ply_points, sort);
+        let data = splats_to_bytes(&splats);
+
+        Ok(ConversionResult { data, count })
+    }
+
+    /// Parse a SPLAT file from bytes and return individual splat data.
+    ///
+    /// This function takes raw SPLAT binary data and returns an array of splat objects
+    /// that can be easily accessed from JavaScript.
+    ///
+    /// @param splat_data - SPLAT file contents as a Uint8Array (must be multiple of 32 bytes)
+    /// @returns Array of Splat objects
+    /// @throws Error if the data length is not a multiple of 32 bytes
+    #[wasm_bindgen(js_name = parseSplatData)]
+    pub fn parse_splat_data(splat_data: &[u8]) -> Result<js_sys::Array, JsValue> {
+        if splat_data.len() % 32 != 0 {
+            return Err(JsValue::from_str(&format!(
+                "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
+                splat_data.len()
+            )));
+        }
+
+        let splats: &[SplatPoint] = bytemuck::cast_slice(splat_data);
+        let array = js_sys::Array::new_with_length(splats.len() as u32);
+
+        for (i, splat) in splats.iter().enumerate() {
+            let obj = js_sys::Object::new();
+
+            // Position array
+            let pos = js_sys::Array::new();
+            pos.push(&JsValue::from_f64(splat.pos[0] as f64));
+            pos.push(&JsValue::from_f64(splat.pos[1] as f64));
+            pos.push(&JsValue::from_f64(splat.pos[2] as f64));
+            js_sys::Reflect::set(&obj, &JsValue::from_str("position"), &pos)?;
+
+            // Scale array
+            let scale = js_sys::Array::new();
+            scale.push(&JsValue::from_f64(splat.scale[0] as f64));
+            scale.push(&JsValue::from_f64(splat.scale[1] as f64));
+            scale.push(&JsValue::from_f64(splat.scale[2] as f64));
+            js_sys::Reflect::set(&obj, &JsValue::from_str("scale"), &scale)?;
+
+            // Color array (RGBA)
+            let color = js_sys::Array::new();
+            color.push(&JsValue::from_f64(splat.color[0] as f64));
+            color.push(&JsValue::from_f64(splat.color[1] as f64));
+            color.push(&JsValue::from_f64(splat.color[2] as f64));
+            color.push(&JsValue::from_f64(splat.color[3] as f64));
+            js_sys::Reflect::set(&obj, &JsValue::from_str("color"), &color)?;
+
+            // Rotation array (quaternion)
+            let rot = js_sys::Array::new();
+            rot.push(&JsValue::from_f64(splat.rot[0] as f64));
+            rot.push(&JsValue::from_f64(splat.rot[1] as f64));
+            rot.push(&JsValue::from_f64(splat.rot[2] as f64));
+            rot.push(&JsValue::from_f64(splat.rot[3] as f64));
+            js_sys::Reflect::set(&obj, &JsValue::from_str("rotation"), &rot)?;
+
+            array.set(i as u32, obj.into());
+        }
+
+        Ok(array)
+    }
+
+    /// Get the number of splats in a SPLAT data buffer.
+    ///
+    /// @param splat_data - SPLAT file contents as a Uint8Array
+    /// @returns Number of splats in the data
+    /// @throws Error if the data length is not a multiple of 32 bytes
+    #[wasm_bindgen(js_name = getSplatCount)]
+    pub fn get_splat_count(splat_data: &[u8]) -> Result<usize, JsValue> {
+        if splat_data.len() % 32 != 0 {
+            return Err(JsValue::from_str(&format!(
+                "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
+                splat_data.len()
+            )));
+        }
+        Ok(splat_data.len() / 32)
     }
 }

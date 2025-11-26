@@ -3,11 +3,12 @@
 [![Crates.io](https://img.shields.io/crates/v/ply2splat.svg)](https://crates.io/crates/ply2splat)
 [![docs.rs](https://docs.rs/ply2splat/badge.svg)](https://docs.rs/ply2splat)
 [![PyPI](https://img.shields.io/pypi/v/ply2splat.svg)](https://pypi.org/project/ply2splat/)
+[![npm](https://img.shields.io/npm/v/ply2splat.svg)](https://www.npmjs.com/package/ply2splat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the `.splat` format.
 
-Available on [crates.io](https://crates.io/crates/ply2splat) for Rust and [PyPI](https://pypi.org/project/ply2splat/) for Python.
+Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](https://pypi.org/project/ply2splat/) for Python, and [npm](https://www.npmjs.com/package/ply2splat) for JavaScript/TypeScript.
 
 ## Features
 
@@ -15,6 +16,7 @@ Available on [crates.io](https://crates.io/crates/ply2splat) for Rust and [PyPI]
 - **Fast I/O**: Uses zero-copy serialization and large buffers for maximum throughput.
 - **Correctness**: Implements the standard conversion logic including Spherical Harmonics (SH) to color conversion and geometric transformations.
 - **Python Bindings**: Use the library directly from Python via PyO3.
+- **WebAssembly Support**: Run in browsers and Node.js via the npm package.
 
 ## Installation
 
@@ -75,6 +77,14 @@ maturin build --release
 pip install target/wheels/ply2splat-*.whl
 ```
 
+### npm Package (WebAssembly)
+
+Install from [npm](https://www.npmjs.com/package/ply2splat):
+
+```bash
+npm install ply2splat
+```
+
 ## Usage
 
 ### CLI
@@ -121,17 +131,79 @@ data, count = ply2splat.load_and_convert("input.ply")
 print(f"Loaded {count} splats, {len(data)} bytes")
 ```
 
+### JavaScript/TypeScript (Browser/Node.js)
+
+```javascript
+import init, { convert, parseSplatData, getSplatCount } from 'ply2splat';
+
+// Initialize the WASM module
+await init();
+
+// Read PLY file (e.g., from a file input or fetch)
+const plyData = new Uint8Array(await file.arrayBuffer());
+
+// Convert PLY to SPLAT format
+const result = convert(plyData, true);  // true = sort by importance
+console.log(`Converted ${result.count} splats`);
+
+// Get the raw SPLAT data as Uint8Array
+const splatData = result.data;
+
+// Parse SPLAT data into individual splat objects
+const splats = parseSplatData(splatData);
+for (const splat of splats) {
+    console.log('Position:', splat.position);  // [x, y, z]
+    console.log('Scale:', splat.scale);        // [sx, sy, sz]
+    console.log('Color:', splat.color);        // [r, g, b, a]
+    console.log('Rotation:', splat.rotation);  // [r0, r1, r2, r3]
+}
+
+// Get the count of splats from raw data
+const count = getSplatCount(splatData);
+console.log(`SPLAT data contains ${count} splats`);
+```
+
+#### TypeScript Types
+
+The package includes TypeScript definitions. Key types:
+
+```typescript
+interface ConversionResult {
+    readonly data: Uint8Array;  // Raw SPLAT binary data (32 bytes per splat)
+    readonly count: number;     // Number of splats
+}
+
+// Functions
+function convert(ply_data: Uint8Array, sort?: boolean | null): ConversionResult;
+function parseSplatData(splat_data: Uint8Array): Array<any>;
+function getSplatCount(splat_data: Uint8Array): number;
+```
+
 ## Development
 
 ### Requirements
 
 - Rust (latest stable)
 - Nix (optional, for reproducible environment)
+- wasm-pack (for WASM builds)
 
 ### Running Tests
 
 ```bash
 cargo test
+```
+
+### Building WASM
+
+```bash
+# Install wasm-pack
+cargo install wasm-pack
+
+# Build for web (browsers)
+wasm-pack build --target web --features wasm
+
+# Build for bundlers (webpack, etc.)
+wasm-pack build --target bundler --features wasm
 ```
 
 ### Fuzzing

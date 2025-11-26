@@ -1126,6 +1126,7 @@ dependencies = [
  "clap",
  "hex",
  "indicatif",
+ "js-sys",
  "memmap2",
  "ply-rs",
  "predicates",
@@ -1134,6 +1135,7 @@ dependencies = [
  "reqwest",
  "sha2",
  "tempfile",
+ "wasm-bindgen",
 ]
 
 [[package]]
