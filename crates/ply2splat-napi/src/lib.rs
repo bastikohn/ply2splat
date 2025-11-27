@@ -44,7 +44,7 @@ pub struct ConversionResult {
 /// @returns Number of splats in the data
 #[napi]
 pub fn get_splat_count(splat_data: Buffer) -> Result<u32> {
-    if splat_data.len() % 32 != 0 {
+    if !splat_data.len().is_multiple_of(32) {
         return Err(Error::from_reason(format!(
             "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
             splat_data.len()

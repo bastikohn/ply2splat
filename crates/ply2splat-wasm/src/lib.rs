@@ -73,7 +73,7 @@ pub fn wasm_convert(ply_data: &[u8], sort: Option<bool>) -> Result<ConversionRes
 /// @throws Error if the data length is not a multiple of 32 bytes
 #[wasm_bindgen(js_name = parseSplatData)]
 pub fn parse_splat_data(splat_data: &[u8]) -> Result<js_sys::Array, JsValue> {
-    if splat_data.len() % 32 != 0 {
+    if !splat_data.len().is_multiple_of(32) {
         return Err(JsValue::from_str(&format!(
             "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
             splat_data.len()
@@ -129,7 +129,7 @@ pub fn parse_splat_data(splat_data: &[u8]) -> Result<js_sys::Array, JsValue> {
 /// @throws Error if the data length is not a multiple of 32 bytes
 #[wasm_bindgen(js_name = getSplatCount)]
 pub fn get_splat_count(splat_data: &[u8]) -> Result<usize, JsValue> {
-    if splat_data.len() % 32 != 0 {
+    if !splat_data.len().is_multiple_of(32) {
         return Err(JsValue::from_str(&format!(
             "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
             splat_data.len()

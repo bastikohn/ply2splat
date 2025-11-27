@@ -18,8 +18,8 @@ use ply_rs::parser::Parser;
 use ply_rs::ply::{Property, PropertyAccess};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
-use std::io::Cursor;
 use std::fs::File;
+use std::io::Cursor;
 use std::io::{BufReader, Write};
 use std::path::Path;
 

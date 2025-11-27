@@ -153,49 +153,15 @@ print(f"Loaded {count} splats, {len(data)} bytes")
 
 The npm package provides full TypeScript support with helper functions for working with various input types.
 
-#### Basic Usage
+#### Browser Usage
 
 ```typescript
-import init, { convert, parseSplatData, getSplatCount } from 'ply2splat';
+import { init, convertFromFile, convertFromUrl, downloadSplat } from 'ply2splat';
 
 // Initialize the WASM module
 await init();
 
-// Read PLY file (e.g., from a file input or fetch)
-const plyData = new Uint8Array(await file.arrayBuffer());
-
-// Convert PLY to SPLAT format
-const result = convert(plyData, true);  // true = sort by importance
-console.log(`Converted ${result.count} splats`);
-
-// Get the raw SPLAT data as Uint8Array
-const splatData = result.data;
-
-// Parse SPLAT data into individual splat objects
-const splats = parseSplatData(splatData);
-for (const splat of splats) {
-    console.log('Position:', splat.position);  // [x, y, z]
-    console.log('Scale:', splat.scale);        // [sx, sy, sz]
-    console.log('Color:', splat.color);        // [r, g, b, a]
-    console.log('Rotation:', splat.rotation);  // [r0, r1, r2, r3]
-}
-
-// Get the count of splats from raw data
-const count = getSplatCount(splatData);
-console.log(`SPLAT data contains ${count} splats`);
-```
-
-#### TypeScript Helpers
-
-For better TypeScript support and easier handling of various input types, use the helpers module:
-
-```typescript
-import { init, convert, convertFromFile, convertFromUrl, convertFromBlob, downloadSplat, Splat } from 'ply2splat/helpers';
-
-// Initialize the WASM module
-await init();
-
-// Convert from a File input (browser)
+// Convert from a File input
 const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
 fileInput.addEventListener('change', async (e) => {
   const file = fileInput.files![0];
@@ -203,8 +169,8 @@ fileInput.addEventListener('change', async (e) => {
   console.log(`Converted ${result.count} splats`);
   
   // Get typed Splat objects
-  const splats: Splat[] = result.toSplats();
-  console.log(splats[0].position);  // [number, number, number]
+  const splats = result.toSplats();
+  console.log(splats[0].position);  // [x, y, z]
   
   // Download the result
   downloadSplat(result.data, 'output.splat');
@@ -212,24 +178,16 @@ fileInput.addEventListener('change', async (e) => {
 
 // Convert from a URL
 const result = await convertFromUrl('https://example.com/model.ply');
-
-// Convert from a Blob
-const blob = new Blob([plyData]);
-const result2 = await convertFromBlob(blob);
-
-// Convert with options
-const result3 = convert(plyData, { sort: false });
 ```
 
 #### Node.js Usage
 
 ```typescript
+import { init, convertFromBuffer } from 'ply2splat';
 import { readFileSync } from 'fs';
-import { initSync, convertFromBuffer } from 'ply2splat/helpers';
 
-// Load and initialize WASM synchronously
-const wasmCode = readFileSync('node_modules/ply2splat/ply2splat_bg.wasm');
-initSync(wasmCode);
+// Initialize the WASM module
+await init();
 
 // Convert from a Node.js Buffer
 const plyBuffer = readFileSync('model.ply');
@@ -240,42 +198,7 @@ console.log(`Converted ${result.count} splats`);
 const splats = result.toSplats();
 ```
 
-#### TypeScript Types
-
-The package includes full TypeScript definitions:
-
-```typescript
-// Splat interface with proper tuple types
-interface Splat {
-  position: [number, number, number];  // [x, y, z]
-  scale: [number, number, number];     // [sx, sy, sz]
-  color: [number, number, number, number];    // [r, g, b, a] (0-255)
-  rotation: [number, number, number, number]; // quaternion (0-255)
-}
-
-// Conversion result with helper methods
-interface TypedConversionResult {
-  readonly data: Uint8Array;  // Raw SPLAT binary data
-  readonly count: number;     // Number of splats
-  toSplats(): Splat[];       // Parse into Splat objects
-  free(): void;              // Free WASM memory (optional)
-}
-
-// Available helper functions
-function convert(plyData: Uint8Array, options?: ConvertOptions): TypedConversionResult;
-function convertFromFile(file: File, options?: ConvertOptions): Promise<TypedConversionResult>;
-function convertFromBlob(blob: Blob, options?: ConvertOptions): Promise<TypedConversionResult>;
-function convertFromUrl(url: string | URL, options?: ConvertOptions): Promise<TypedConversionResult>;
-function convertFromBuffer(buffer: Buffer, options?: ConvertOptions): TypedConversionResult;
-function convertFromArrayBuffer(buffer: ArrayBuffer, options?: ConvertOptions): TypedConversionResult;
-function convertFromResponse(response: Response, options?: ConvertOptions): Promise<TypedConversionResult>;
-function convertFromFormData(formData: FormData, fieldName?: string, options?: ConvertOptions): Promise<TypedConversionResult>;
-function parseSplatData(splatData: Uint8Array): Splat[];
-function getSplatCount(splatData: Uint8Array): number;
-function createSplatBlob(splatData: Uint8Array): Blob;
-function downloadSplat(splatData: Uint8Array, filename?: string): void;
-function toUint8Array(input: PlyInput): Promise<Uint8Array>;
-```
+The package includes full TypeScript definitions. See the [API documentation](https://github.com/bastikohn/ply2splat/blob/main/packages/ply2splat/README.md) for detailed type information and all available helper functions.
 
 ## Development
 
