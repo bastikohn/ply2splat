@@ -19,8 +19,7 @@ use ply_rs::ply::{Property, PropertyAccess};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
 use std::fs::File;
-use std::io::Cursor;
-use std::io::{BufReader, Write};
+use std::io::{BufReader, Cursor, Write};
 use std::path::Path;
 
 const SH_C0: f32 = 0.282_094_8;
