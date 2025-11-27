@@ -1,11 +1,11 @@
 [package]
 name = "ply2splat-python"
-version = "0.2.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "Python bindings for Gaussian Splatting PLY to SPLAT conversion"
-license = "MIT"
+license.workspace = true
 readme = "../../README.md"
-repository = "https://github.com/bastikohn/ply2splat"
+repository.workspace = true
 keywords = ["graphics", "gaussian-splatting", "python", "pyo3"]
 categories = ["multimedia::encoding"]
 
@@ -14,6 +14,8 @@ name = "ply2splat"
 crate-type = ["cdylib"]
 
 [dependencies]
-ply2splat_lib = { package = "ply2splat", path = "../..", features = ["parallel"] }
+ply2splat_lib = { package = "ply2splat", path = "../..", features = [
+    "parallel",
+] }
 pyo3 = { version = "0.23", features = ["extension-module"] }
 bytemuck = { version = "1.14", features = ["derive"] }

@@ -1,11 +1,11 @@
 [package]
 name = "ply2splat-wasm"
-version = "0.2.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "WebAssembly bindings for Gaussian Splatting PLY to SPLAT conversion"
-license = "MIT"
+license.workspace = true
 readme = "README.md"
-repository = "https://github.com/bastikohn/ply2splat"
+repository.workspace = true
 keywords = ["graphics", "gaussian-splatting", "wasm", "webassembly"]
 categories = ["wasm", "multimedia::encoding"]
 

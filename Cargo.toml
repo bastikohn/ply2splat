@@ -10,7 +10,7 @@ resolver = "2"
 default-members = ["."]
 
 [workspace.package]
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/bastikohn/ply2splat"
@@ -19,12 +19,12 @@ repository = "https://github.com/bastikohn/ply2splat"
 # The actual library is now in crates/ply2splat-core
 [package]
 name = "ply2splat"
-version = "0.2.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 description = "A Rust crate for processing Gaussian Splatting PLY and SPLAT files"
-license = "MIT"
+license.workspace = true
 readme = "README.md"
-repository = "https://github.com/bastikohn/ply2splat"
+repository.workspace = true
 keywords = ["graphics", "gaussian-splatting", "ply", "splat", "3d"]
 categories = ["command-line-utilities", "multimedia::encoding"]
 exclude = [
