@@ -1,0 +1,21 @@
+[package]
+name = "ply2splat-napi"
+version = "0.2.0"
+edition = "2021"
+description = "Native Node.js bindings for Gaussian Splatting PLY to SPLAT conversion via NAPI-RS"
+license = "MIT"
+readme = "../../README.md"
+repository = "https://github.com/bastikohn/ply2splat"
+keywords = ["graphics", "gaussian-splatting", "napi", "nodejs"]
+categories = ["multimedia::encoding"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+ply2splat = { path = "../..", features = ["parallel"] }
+napi = { version = "2", features = ["napi4"] }
+napi-derive = "2"
+
+[build-dependencies]
+napi-build = "2"

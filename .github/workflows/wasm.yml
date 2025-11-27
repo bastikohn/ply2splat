@@ -1,0 +1,102 @@
+name: WASM
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-wasm:
+    name: Build WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: Build WASM (web target)
+        run: wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+      - name: Build npm package TypeScript
+        run: |
+          cd packages/ply2splat
+          npm install
+          npm run build
+      - name: Verify package contents
+        run: |
+          echo "Package contents:"
+          ls -la packages/ply2splat/
+          ls -la packages/ply2splat/wasm/
+          ls -la packages/ply2splat/dist/
+      - name: Upload npm package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ply2splat-npm
+          path: packages/ply2splat/
+
+  test-wasm:
+    name: Test WASM in Node.js
+    needs: build-wasm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Download npm package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ply2splat-npm
+          path: packages/ply2splat/
+      - name: Verify artifact contents
+        run: |
+          echo "Downloaded artifact contents:"
+          ls -la packages/ply2splat/
+          ls -la packages/ply2splat/wasm/
+      - name: Run WASM tests
+        run: npm test
+        working-directory: packages/ply2splat
+
+  publish-npm:
+    name: Publish to npm
+    needs: [build-wasm, test-wasm]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Download npm package artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ply2splat-npm
+          path: packages/ply2splat/
+      - name: Verify package before publish
+        run: |
+          if [ ! -f packages/ply2splat/package.json ]; then
+            echo "Error: package.json not found"
+            exit 1
+          fi
+          echo "Publishing package:"
+          cat packages/ply2splat/package.json
+      - name: Publish to npm
+        run: npm publish --access public
+        working-directory: packages/ply2splat
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -3,11 +3,28 @@
 [![Crates.io](https://img.shields.io/crates/v/ply2splat.svg)](https://crates.io/crates/ply2splat)
 [![docs.rs](https://docs.rs/ply2splat/badge.svg)](https://docs.rs/ply2splat)
 [![PyPI](https://img.shields.io/pypi/v/ply2splat.svg)](https://pypi.org/project/ply2splat/)
+[![npm](https://img.shields.io/npm/v/ply2splat.svg)](https://www.npmjs.com/package/ply2splat)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the `.splat` format.
 
-Available on [crates.io](https://crates.io/crates/ply2splat) for Rust and [PyPI](https://pypi.org/project/ply2splat/) for Python.
+Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](https://pypi.org/project/ply2splat/) for Python, and [npm](https://www.npmjs.com/package/ply2splat) for JavaScript/TypeScript.
+
+## Workspace Architecture
+
+This repository is organized as a Cargo workspace with multiple crates:
+
+```
+bindings/
+├── ply2splat-core/    # Core library - business logic only
+├── ply2splat-cli/     # CLI tool
+├── ply2splat-wasm/    # WASM bindings for browser/Node.js
+├── ply2splat-napi/    # Native Node.js bindings via NAPI-RS
+└── ply2splat-python/  # Python bindings via PyO3
+
+packages/
+└── ply2splat/         # Unified npm package (WASM + optional native)
+```
 
 ## Features
 
@@ -15,22 +32,25 @@ Available on [crates.io](https://crates.io/crates/ply2splat) for Rust and [PyPI]
 - **Fast I/O**: Uses zero-copy serialization and large buffers for maximum throughput.
 - **Correctness**: Implements the standard conversion logic including Spherical Harmonics (SH) to color conversion and geometric transformations.
 - **Python Bindings**: Use the library directly from Python via PyO3.
+- **WebAssembly Support**: Run in browsers and Node.js via the npm package.
+- **Native Node.js Bindings**: For maximum performance via NAPI-RS.
 
 ## Installation
 
 ### Rust Crate
 
-Add `ply2splat` to your `Cargo.toml`:
+Add `ply2splat-core` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ply2splat = "0.1"
+ply2splat-core = "0.2"
 ```
 
-Or install via cargo:
+Or use the re-exporting crate for backward compatibility:
 
-```bash
-cargo add ply2splat
+```toml
+[dependencies]
+ply2splat = "0.2"
 ```
 
 ### CLI
@@ -38,7 +58,7 @@ cargo add ply2splat
 Install the CLI tool directly from [crates.io](https://crates.io/crates/ply2splat):
 
 ```bash
-cargo install ply2splat
+cargo install ply2splat-cli
 ```
 
 Or build from source:
@@ -73,6 +93,14 @@ Or build a wheel:
 ```bash
 maturin build --release
 pip install target/wheels/ply2splat-*.whl
+```
+
+### npm Package (WebAssembly)
+
+Install from [npm](https://www.npmjs.com/package/ply2splat):
+
+```bash
+npm install ply2splat
 ```
 
 ## Usage
@@ -121,17 +149,98 @@ data, count = ply2splat.load_and_convert("input.ply")
 print(f"Loaded {count} splats, {len(data)} bytes")
 ```
 
+### JavaScript/TypeScript (Browser/Node.js)
+
+The npm package provides full TypeScript support with helper functions for working with various input types.
+
+#### Browser Usage
+
+```typescript
+import { init, convertFromFile, convertFromUrl, downloadSplat } from 'ply2splat';
+
+// Initialize the WASM module
+await init();
+
+// Convert from a File input
+const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+fileInput.addEventListener('change', async (e) => {
+  const file = fileInput.files![0];
+  const result = await convertFromFile(file);
+  console.log(`Converted ${result.count} splats`);
+  
+  // Get typed Splat objects
+  const splats = result.toSplats();
+  console.log(splats[0].position);  // [x, y, z]
+  
+  // Download the result
+  downloadSplat(result.data, 'output.splat');
+});
+
+// Convert from a URL
+const result = await convertFromUrl('https://example.com/model.ply');
+```
+
+#### Node.js Usage
+
+```typescript
+import { init, convertFromBuffer } from 'ply2splat';
+import { readFileSync } from 'fs';
+
+// Initialize the WASM module
+await init();
+
+// Convert from a Node.js Buffer
+const plyBuffer = readFileSync('model.ply');
+const result = convertFromBuffer(plyBuffer);
+console.log(`Converted ${result.count} splats`);
+
+// Get typed splat data
+const splats = result.toSplats();
+```
+
+The package includes full TypeScript definitions. See the [API documentation](https://github.com/bastikohn/ply2splat/blob/main/packages/ply2splat/README.md) for detailed type information and all available helper functions.
+
 ## Development
 
 ### Requirements
 
 - Rust (latest stable)
 - Nix (optional, for reproducible environment)
+- wasm-pack (for WASM builds)
 
 ### Running Tests
 
 ```bash
-cargo test
+# Test the entire workspace
+cargo test --workspace
+
+# Test a specific crate
+cargo test -p ply2splat-core
+```
+
+### Building WASM
+
+```bash
+# Install wasm-pack
+cargo install wasm-pack
+
+# Build for web (browsers)
+wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+
+# Build for bundlers (webpack, etc.)
+wasm-pack build bindings/ply2splat-wasm --target bundler --out-dir ../../packages/ply2splat/wasm
+```
+
+### Building the npm Package
+
+```bash
+# Build WASM first
+wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+
+# Build TypeScript
+cd packages/ply2splat
+npm install
+npm run build
 ```
 
 ### Fuzzing

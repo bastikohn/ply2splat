@@ -52,7 +52,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i 3.9 3.10 3.11 3.12 3.13
+          args: --release --out dist -i 3.9 3.10 3.11 3.12 3.13 --manifest-path bindings/ply2splat-python/Cargo.toml
           manylinux: auto
 
       - name: Test wheel
@@ -79,7 +79,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist
+          args: --out dist --manifest-path bindings/ply2splat-python/Cargo.toml
 
       - name: Upload sdist
         uses: actions/upload-artifact@v4

@@ -1,3 +1,22 @@
+[workspace]
+members = [
+    "bindings/ply2splat-wasm",
+    "bindings/ply2splat-python",
+    "bindings/ply2splat-napi",
+    "fuzz",
+]
+resolver = "2"
+
+default-members = ["."]
+
+[workspace.package]
+version = "0.2.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/bastikohn/ply2splat"
+
+# Legacy package configuration for backward compatibility
+# The actual library is now in crates/ply2splat-core
 [package]
 name = "ply2splat"
 version = "0.2.0"
@@ -20,28 +39,27 @@ exclude = [
     "AGENTS.md",
 ]
 
+[features]
+default = ["cli", "parallel"]
+parallel = ["dep:rayon"]
+cli = ["dep:clap", "dep:indicatif"]
+
 [lib]
 name = "ply2splat"
 path = "src/lib.rs"
-crate-type = ["lib", "cdylib"]
 
 [[bin]]
 name = "ply2splat"
 path = "src/bin/ply2splat.rs"
-
-[features]
-default = []
-python = ["pyo3"]
+required-features = ["cli"]
 
 [dependencies]
 ply-rs = "0.1"
-clap = { version = "4.4", features = ["derive"] }
 anyhow = "1.0"
 bytemuck = { version = "1.14", features = ["derive"] }
-rayon = "1.8"
-indicatif = "0.18.3"
-memmap2 = "0.9"
-pyo3 = { version = "0.23", features = ["extension-module"], optional = true }
+rayon = { version = "1.8", optional = true }
+clap = { version = "4.4", features = ["derive"], optional = true }
+indicatif = { version = "0.18.3", optional = true }
 
 [dev-dependencies]
 tempfile = "3.8"

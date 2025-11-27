@@ -14,3 +14,18 @@ __pycache__/
 dist/
 .eggs/
 *.whl
+
+# WASM build artifacts
+pkg/
+pkg-nodejs/
+
+# JavaScript/TypeScript - npm packages
+packages/*/node_modules/
+packages/*/dist/
+packages/*/wasm/
+packages/*/*.tsbuildinfo
+node_modules/
+package-lock.json
+
+# Cargo lock for workspace
+Cargo.lock
