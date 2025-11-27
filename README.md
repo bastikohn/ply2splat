@@ -12,18 +12,16 @@ Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](ht
 
 ## Workspace Architecture
 
-This repository is organized as a Cargo workspace with multiple crates:
+This repository is organized as a Cargo workspace:
 
 ```
-bindings/
-├── ply2splat-core/    # Core library - business logic only
-├── ply2splat-cli/     # CLI tool
-├── ply2splat-wasm/    # WASM bindings for browser/Node.js
-├── ply2splat-napi/    # Native Node.js bindings via NAPI-RS
-└── ply2splat-python/  # Python bindings via PyO3
-
-packages/
-└── ply2splat/         # Unified npm package (WASM + optional native)
+.                      # Core library (ply2splat) and CLI
+├── bindings/
+│   ├── ply2splat-wasm/    # WASM bindings for browser/Node.js
+│   ├── ply2splat-napi/    # Native Node.js bindings via NAPI-RS
+│   └── ply2splat-python/  # Python bindings via PyO3
+└── packages/
+    └── ply2splat/         # Unified npm package (WASM + optional native)
 ```
 
 ## Features
@@ -39,14 +37,7 @@ packages/
 
 ### Rust Crate
 
-Add `ply2splat-core` to your `Cargo.toml`:
-
-```toml
-[dependencies]
-ply2splat-core = "0.2"
-```
-
-Or use the re-exporting crate for backward compatibility:
+Add `ply2splat` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -58,7 +49,7 @@ ply2splat = "0.2"
 Install the CLI tool directly from [crates.io](https://crates.io/crates/ply2splat):
 
 ```bash
-cargo install ply2splat-cli
+cargo install ply2splat
 ```
 
 Or build from source:
@@ -215,7 +206,7 @@ The package includes full TypeScript definitions. See the [API documentation](ht
 cargo test --workspace
 
 # Test a specific crate
-cargo test -p ply2splat-core
+cargo test -p ply2splat
 ```
 
 ### Building WASM
