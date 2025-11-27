@@ -28,7 +28,7 @@ jobs:
       - name: Install wasm-pack
         run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - name: Build WASM (web target)
-        run: wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+        run: wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
       - name: Build npm package TypeScript
         run: |
           cd packages/ply2splat

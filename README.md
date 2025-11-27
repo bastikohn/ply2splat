@@ -15,7 +15,7 @@ Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](ht
 This repository is organized as a Cargo workspace with multiple crates:
 
 ```
-crates/
+bindings/
 ├── ply2splat-core/    # Core library - business logic only
 ├── ply2splat-cli/     # CLI tool
 ├── ply2splat-wasm/    # WASM bindings for browser/Node.js
@@ -225,17 +225,17 @@ cargo test -p ply2splat-core
 cargo install wasm-pack
 
 # Build for web (browsers)
-wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
 
 # Build for bundlers (webpack, etc.)
-wasm-pack build crates/ply2splat-wasm --target bundler --out-dir ../../packages/ply2splat/wasm
+wasm-pack build bindings/ply2splat-wasm --target bundler --out-dir ../../packages/ply2splat/wasm
 ```
 
 ### Building the npm Package
 
 ```bash
 # Build WASM first
-wasm-pack build crates/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
+wasm-pack build bindings/ply2splat-wasm --target web --out-dir ../../packages/ply2splat/wasm
 
 # Build TypeScript
 cd packages/ply2splat

@@ -17,5 +17,3 @@ name = "fuzz_conversion"
 path = "fuzz_targets/fuzz_conversion.rs"
 test = false
 doc = false
-
-[workspace]

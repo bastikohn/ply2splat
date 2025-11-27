@@ -5,7 +5,7 @@
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use ply2splat_core::{load_ply_from_bytes, ply_to_splat, splats_to_bytes};
+use ply2splat::{load_ply_from_bytes, ply_to_splat, splats_to_bytes};
 
 /// Convert PLY data to SPLAT format.
 ///

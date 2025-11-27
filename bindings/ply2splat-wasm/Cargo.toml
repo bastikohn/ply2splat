@@ -16,7 +16,7 @@ crate-type = ["cdylib", "rlib"]
 wasm-opt = false
 
 [dependencies]
-ply2splat-core = { path = "../ply2splat-core", default-features = false }
+ply2splat = { path = "../..", default-features = false }
 wasm-bindgen = "0.2.105"
 js-sys = "0.3"
 bytemuck = { version = "1.14", features = ["derive"] }

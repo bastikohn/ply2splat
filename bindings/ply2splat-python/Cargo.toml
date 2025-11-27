@@ -14,6 +14,6 @@ name = "ply2splat"
 crate-type = ["cdylib"]
 
 [dependencies]
-ply2splat-core = { path = "../ply2splat-core", features = ["parallel"] }
+ply2splat_lib = { package = "ply2splat", path = "../..", features = ["parallel"] }
 pyo3 = { version = "0.23", features = ["extension-module"] }
 bytemuck = { version = "1.14", features = ["derive"] }
