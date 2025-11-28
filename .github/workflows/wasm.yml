@@ -75,6 +75,8 @@ jobs:
     needs: [build-wasm, test-wasm]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - name: Setup Node.js
