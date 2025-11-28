@@ -5,3 +5,5 @@ index.js
 index.d.ts
 # npm
 node_modules/
+# Platform binary files (but keep package.json for npm publish)
+npm/*/*.node

@@ -131,17 +131,74 @@ jobs:
         with:
           path: bindings/ply2splat-napi/artifacts
 
-      - name: Move artifacts
+      - name: Move artifacts to npm directories
         run: |
           cd bindings/ply2splat-napi
+          echo "=== Downloaded artifacts ==="
           ls -R artifacts
-          mv artifacts/*/*.node .
-          ls -la *.node
+          
+          # Move each .node file to its corresponding npm directory
+          # darwin-arm64
+          if [ -f "artifacts/bindings-aarch64-apple-darwin/ply2splat-node.darwin-arm64.node" ]; then
+            cp artifacts/bindings-aarch64-apple-darwin/*.node npm/darwin-arm64/
+          fi
+          
+          # darwin-x64
+          if [ -f "artifacts/bindings-x86_64-apple-darwin/ply2splat-node.darwin-x64.node" ]; then
+            cp artifacts/bindings-x86_64-apple-darwin/*.node npm/darwin-x64/
+          fi
+          
+          # linux-x64-gnu
+          if [ -f "artifacts/bindings-x86_64-unknown-linux-gnu/ply2splat-node.linux-x64-gnu.node" ]; then
+            cp artifacts/bindings-x86_64-unknown-linux-gnu/*.node npm/linux-x64-gnu/
+          fi
+          
+          # linux-x64-musl
+          if [ -f "artifacts/bindings-x86_64-unknown-linux-musl/ply2splat-node.linux-x64-musl.node" ]; then
+            cp artifacts/bindings-x86_64-unknown-linux-musl/*.node npm/linux-x64-musl/
+          fi
+          
+          # linux-arm64-gnu
+          if [ -f "artifacts/bindings-aarch64-unknown-linux-gnu/ply2splat-node.linux-arm64-gnu.node" ]; then
+            cp artifacts/bindings-aarch64-unknown-linux-gnu/*.node npm/linux-arm64-gnu/
+          fi
+          
+          # win32-x64-msvc
+          if [ -f "artifacts/bindings-x86_64-pc-windows-msvc/ply2splat-node.win32-x64-msvc.node" ]; then
+            cp artifacts/bindings-x86_64-pc-windows-msvc/*.node npm/win32-x64-msvc/
+          fi
+          
+          # win32-arm64-msvc
+          if [ -f "artifacts/bindings-aarch64-pc-windows-msvc/ply2splat-node.win32-arm64-msvc.node" ]; then
+            cp artifacts/bindings-aarch64-pc-windows-msvc/*.node npm/win32-arm64-msvc/
+          fi
+          
+          echo "=== npm directories after copy ==="
+          ls -la npm/*/
 
-      - name: Publish to npm
+      - name: Publish platform packages
         run: |
           cd bindings/ply2splat-napi
           npm config set //registry.npmjs.org/:_authToken=$NPM_TOKEN
+          for dir in npm/*/; do
+            if [ -d "$dir" ] && [ -f "${dir}package.json" ]; then
+              echo "Publishing $dir"
+              cd "$dir"
+              # Only publish if the .node file exists
+              if ls *.node 1> /dev/null 2>&1; then
+                npm publish --access public || echo "Package already exists or publish failed for $dir"
+              else
+                echo "Skipping $dir - no .node file found"
+              fi
+              cd ../..
+            fi
+          done
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @ply2splat/node
+        run: |
+          cd bindings/ply2splat-napi
           npm publish --access public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

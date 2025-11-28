@@ -43,7 +43,7 @@ jobs:
       - name: Upload npm package artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ply2splat-npm
+          name: ply2splat-browser
           path: packages/ply2splat/
 
   test-wasm:
@@ -59,7 +59,7 @@ jobs:
       - name: Download npm package artifact
         uses: actions/download-artifact@v4
         with:
-          name: ply2splat-npm
+          name: ply2splat-browser
           path: packages/ply2splat/
       - name: Verify artifact contents
         run: |
@@ -71,7 +71,7 @@ jobs:
         working-directory: packages/ply2splat
 
   publish-npm:
-    name: Publish to npm
+    name: Publish @ply2splat/browser to npm
     needs: [build-wasm, test-wasm]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
@@ -85,7 +85,7 @@ jobs:
       - name: Download npm package artifact
         uses: actions/download-artifact@v4
         with:
-          name: ply2splat-npm
+          name: ply2splat-browser
           path: packages/ply2splat/
       - name: Verify package before publish
         run: |
@@ -93,9 +93,9 @@ jobs:
             echo "Error: package.json not found"
             exit 1
           fi
-          echo "Publishing package:"
+          echo "Publishing @ply2splat/browser package:"
           cat packages/ply2splat/package.json
-      - name: Publish to npm
+      - name: Publish @ply2splat/browser to npm
         run: npm publish --access public
         working-directory: packages/ply2splat
         env:

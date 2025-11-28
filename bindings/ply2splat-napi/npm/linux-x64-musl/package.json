@@ -1,0 +1,21 @@
+{
+  "name": "@ply2splat/node-linux-x64-musl",
+  "version": "0.4.4",
+  "os": ["linux"],
+  "cpu": ["x64"],
+  "main": "ply2splat-node.linux-x64-musl.node",
+  "files": ["ply2splat-node.linux-x64-musl.node"],
+  "description": "Native Node.js bindings for ply2splat - Linux x64 (musl)",
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "libc": ["musl"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bastikohn/ply2splat"
+  }
+}
