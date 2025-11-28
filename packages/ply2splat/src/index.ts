@@ -71,11 +71,22 @@ let initPromise: Promise<void> | null = null;
 /**
  * Try to load native bindings
  */
-function loadNativeBinding(): NativeBinding | null {
+async function loadNativeBinding(): Promise<NativeBinding | null> {
   try {
+    const isNode =
+      typeof process !== "undefined" &&
+      process.versions != null &&
+      process.versions.node != null;
+
+    if (!isNode) return null;
+
+    // Dynamic import 'module' to avoid top-level dependency for browsers
+    const { createRequire } = await import("module");
+    const require = createRequire(import.meta.url);
+
     // Try to require the native binding
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const native = require('@ply2splat/native') as NativeBinding;
+    const native = require("@ply2splat/native") as NativeBinding;
     native.isNative = true;
     return native;
   } catch {
@@ -87,14 +98,43 @@ function loadNativeBinding(): NativeBinding | null {
  * Load WASM bindings
  */
 async function loadWasmBinding(): Promise<WasmBinding> {
-  const wasm = await import('../wasm/ply2splat_wasm.js');
-  await wasm.default();
+  const wasm = await import("../wasm/ply2splat_wasm.js");
+
+  const isNode =
+    typeof process !== "undefined" &&
+    process.versions != null &&
+    process.versions.node != null;
+
+  if (isNode) {
+    try {
+      // Dynamic imports to avoid bundling fs/path in browser builds
+      const fs = await import("fs");
+      const path = await import("path");
+      const url = await import("url");
+
+      const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+      const wasmPath = path.resolve(
+        __dirname,
+        "../wasm/ply2splat_wasm_bg.wasm",
+      );
+      const buffer = fs.readFileSync(wasmPath);
+      await wasm.default({ module_or_path: buffer });
+    } catch (e) {
+      // Fallback if something goes wrong (e.g. strange environment)
+      await wasm.default();
+    }
+  } else {
+    await wasm.default();
+  }
+
   return {
     convert: wasm.convert,
     parseSplatData: wasm.parseSplatData,
     getSplatCount: wasm.getSplatCount,
     isNative: false,
-    init: async () => { await wasm.default(); },
+    init: async () => {
+      await wasm.default();
+    },
     initSync: wasm.initSync,
   };
 }
@@ -102,25 +142,25 @@ async function loadWasmBinding(): Promise<WasmBinding> {
 /**
  * Initialize the ply2splat module.
  * Attempts to load native bindings first, falling back to WASM if unavailable.
- * 
+ *
  * @returns Promise that resolves when initialization is complete
  */
 export async function init(): Promise<void> {
   if (binding) return;
   if (initPromise) return initPromise;
-  
+
   initPromise = (async () => {
     // Try native first
-    const native = loadNativeBinding();
+    const native = await loadNativeBinding();
     if (native) {
       binding = native;
       return;
     }
-    
+
     // Fall back to WASM
     binding = await loadWasmBinding();
   })();
-  
+
   return initPromise;
 }
 

@@ -40,7 +40,7 @@ describe('WASM Module', () => {
     const wasmCode = fs.readFileSync(wasmPath);
     const compiled = await WebAssembly.compile(wasmCode);
     const { initSync, convert, getSplatCount, parseSplatData } = await import('../wasm/ply2splat_wasm.js');
-    initSync(compiled);
+    initSync({ module: compiled });
     
     wasmModule = { convert, getSplatCount, parseSplatData };
   });
