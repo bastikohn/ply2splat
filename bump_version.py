@@ -75,10 +75,10 @@ def bump_pyproject(new_version):
         f.write(new_content)
     print(f"Updated {path}")
 
-def run_git_commands(version):
+def run_git_commands(version, files):
     try:
-        # Stage all changes
-        subprocess.run(["git", "add", "."], check=True)
+        # Stage specific changes
+        subprocess.run(["git", "add"] + files, check=True)
         
         # Commit
         commit_msg = f"chore: bump version to {version}"
@@ -108,6 +108,13 @@ if __name__ == "__main__":
 
     print(f"Bumping version to {new_version}...")
     
+    files_to_update = [
+        'Cargo.toml',
+        'packages/ply2splat/package.json',
+        'bindings/ply2splat-napi/package.json',
+        'pyproject.toml'
+    ]
+
     try:
         bump_cargo_toml(new_version)
         bump_npm_package('packages/ply2splat/package.json', new_version, update_dep=True)
@@ -115,7 +122,16 @@ if __name__ == "__main__":
         bump_pyproject(new_version)
         print(f"Successfully updated files to {new_version}")
         
-        run_git_commands(new_version)
+        run_git_commands(new_version, files_to_update)
+
+        # Ask to push
+        response = input("Do you want to push changes and tags now? [y/N] ")
+        if response.lower() == 'y':
+            print("Pushing changes...")
+            subprocess.run(["git", "push", "--follow-tags"], check=True)
+            print("Done.")
+        else:
+            print("Skipping push. Remember to run: git push --follow-tags")
         
     except Exception as e:
         print(f"Error: {e}")
