@@ -52,3 +52,16 @@ pub fn get_splat_count(splat_data: Buffer) -> Result<u32> {
     }
     Ok((splat_data.len() / 32) as u32)
 }
+
+/// Run the ply2splat CLI directly.
+///
+/// @param args - Array of command-line arguments (e.g. ["--input", "file.ply", "--output", "file.splat"])
+#[napi]
+pub fn cli(args: Vec<String>) -> Result<()> {
+    // Prepend a dummy program name because clap expects the first arg to be the binary path
+    let mut full_args = vec!["ply2splat".to_string()];
+    full_args.extend(args);
+
+    ply2splat::cli::run(full_args)
+        .map_err(|e| Error::from_reason(format!("CLI execution failed: {}", e)))
+}

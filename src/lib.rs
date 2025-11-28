@@ -22,6 +22,9 @@ use std::fs::File;
 use std::io::{BufReader, Cursor, Write};
 use std::path::Path;
 
+#[cfg(feature = "cli")]
+pub mod cli;
+
 const SH_C0: f32 = 0.282_094_8;
 
 /// Represents a raw Gaussian Splat read from a PLY file.

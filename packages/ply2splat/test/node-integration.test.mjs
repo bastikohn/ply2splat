@@ -4,6 +4,8 @@
  * This verifies that the package's entry point (dist/index.js) works correctly
  * in a Node.js environment, specifically handling WASM loading via 'fs'
  * instead of 'fetch' (which fails in Node.js for local files).
+ * 
+ * @ts-check
  */
 
 import { test, describe } from 'node:test';
@@ -45,8 +47,6 @@ describe('Node.js Integration', () => {
     await init();
     const backend = getBackend();
     assert.ok(backend === 'wasm' || backend === 'native', `Backend should be wasm or native, got ${backend}`);
-    // In this environment, we expect WASM, but being flexible is good
-    // console.log(`Using backend: ${backend}`);
   });
 
   test('convert() should process data via the public API', async () => {

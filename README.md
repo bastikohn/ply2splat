@@ -86,7 +86,9 @@ maturin build --release
 pip install target/wheels/ply2splat-*.whl
 ```
 
-### npm Package (WebAssembly)
+### npm Package (Combined WASM + Native)
+
+The `ply2splat` npm package provides a unified interface that seamlessly combines WebAssembly (WASM) for browser support and high-performance native bindings for Node.js.
 
 Install from [npm](https://www.npmjs.com/package/ply2splat):
 
@@ -94,12 +96,29 @@ Install from [npm](https://www.npmjs.com/package/ply2splat):
 npm install ply2splat
 ```
 
+When installed in a Node.js environment, it will attempt to download and use the native bindings (`@ply2splat/native`) for maximum performance and multi-threading. If the native bindings are unavailable or the platform is unsupported, it gracefully falls back to the WASM implementation.
+
 ## Usage
 
 ### CLI
 
+#### Standard Installation (Rust)
+
 ```bash
 ply2splat --input input.ply --output output.splat
+```
+
+#### Native CLI via Node.js
+
+You can also run the high-performance Rust CLI directly via Node.js without installing Rust or compiling the binary manually. This uses the pre-compiled native bindings.
+
+```bash
+# Run once without installing
+npx @ply2splat/native --input input.ply --output output.splat
+
+# Or install globally
+npm install -g @ply2splat/native
+ply2splat --input input.ply
 ```
 
 ### Python
@@ -142,7 +161,7 @@ print(f"Loaded {count} splats, {len(data)} bytes")
 
 ### JavaScript/TypeScript (Browser/Node.js)
 
-The npm package provides full TypeScript support with helper functions for working with various input types.
+The npm package provides full TypeScript support with helper functions for working with various input types. It automatically selects the best backend (Native or WASM) for your environment.
 
 #### Browser Usage
 
@@ -174,11 +193,13 @@ const result = await convertFromUrl('https://example.com/model.ply');
 #### Node.js Usage
 
 ```typescript
-import { init, convertFromBuffer } from 'ply2splat';
+import { init, convertFromBuffer, getBackend } from 'ply2splat';
 import { readFileSync } from 'fs';
 
-// Initialize the WASM module
+// Initialize (loads native bindings if available, otherwise WASM)
 await init();
+
+console.log(`Using backend: ${getBackend()}`); // 'native' or 'wasm'
 
 // Convert from a Node.js Buffer
 const plyBuffer = readFileSync('model.ply');
