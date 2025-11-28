@@ -46,5 +46,6 @@
     "@types/node": "^20.0.0"
   },
   "optionalDependencies": {
+    "@ply2splat/native": "^0.3.1"
   }
 }
