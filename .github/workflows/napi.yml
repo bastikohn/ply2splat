@@ -142,7 +142,7 @@ jobs:
         run: |
           cd bindings/ply2splat-napi
           npm config set //registry.npmjs.org/:_authToken=$NPM_TOKEN
-          npx --yes @napi-rs/cli publish --access public
+          npm publish --access public
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
