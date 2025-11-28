@@ -43,9 +43,9 @@ def bump_npm_package(path, new_version, update_dep=False):
     )
     
     if update_dep:
-        # Update optionalDependencies @ply2splat/native to use caret version
+        # Update optionalDependencies ply2splat-native to use caret version
         content = re.sub(
-            r'("@ply2splat/native":\s*"\^)([^"]+)(")',
+            r'("ply2splat-native":\s*"\^)([^"]+)(")',
             r'\g<1>' + new_version + r'\g<3>',
             content
         )
@@ -80,16 +80,27 @@ def run_git_commands(version, files):
         # Stage specific changes
         subprocess.run(["git", "add"] + files, check=True)
         
-        # Commit
-        commit_msg = f"chore: bump version to {version}"
-        subprocess.run(["git", "commit", "-m", commit_msg], check=True)
-        print(f"Committed changes: {commit_msg}")
+        # Check for staged changes
+        # git diff --cached --quiet returns 1 if there are differences (changes), 0 if clean
+        result = subprocess.run(["git", "diff", "--cached", "--quiet"])
+        
+        if result.returncode == 1: # Changes detected
+            commit_msg = f"chore: bump version to {version}"
+            subprocess.run(["git", "commit", "-m", commit_msg], check=True)
+            print(f"Committed changes: {commit_msg}")
+        else:
+            print("Nothing to commit (files might remain unchanged).")
         
         # Tag
         tag_name = f"v{version}"
-        subprocess.run(["git", "tag", tag_name], check=True)
-        print(f"Created tag: {tag_name}")
-        
+        # Check if tag exists
+        tag_check = subprocess.run(["git", "tag", "-l", tag_name], capture_output=True, text=True)
+        if tag_name not in tag_check.stdout:
+            subprocess.run(["git", "tag", tag_name], check=True)
+            print(f"Created tag: {tag_name}")
+        else:
+            print(f"Tag {tag_name} already exists.")
+
     except subprocess.CalledProcessError as e:
         print(f"Git command failed: {e}")
         sys.exit(1)

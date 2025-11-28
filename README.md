@@ -96,7 +96,7 @@ Install from [npm](https://www.npmjs.com/package/ply2splat):
 npm install ply2splat
 ```
 
-When installed in a Node.js environment, it will attempt to download and use the native bindings (`@ply2splat/native`) for maximum performance and multi-threading. If the native bindings are unavailable or the platform is unsupported, it gracefully falls back to the WASM implementation.
+When installed in a Node.js environment, it will attempt to download and use the native bindings (`ply2splat-native`) for maximum performance and multi-threading. If the native bindings are unavailable or the platform is unsupported, it gracefully falls back to the WASM implementation.
 
 ## Usage
 
@@ -114,10 +114,10 @@ You can also run the high-performance Rust CLI directly via Node.js without inst
 
 ```bash
 # Run once without installing
-npx @ply2splat/native --input input.ply --output output.splat
+npx ply2splat-native --input input.ply --output output.splat
 
 # Or install globally
-npm install -g @ply2splat/native
+npm install -g ply2splat-native
 ply2splat --input input.ply
 ```
 

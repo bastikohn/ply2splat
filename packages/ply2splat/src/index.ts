@@ -86,7 +86,7 @@ async function loadNativeBinding(): Promise<NativeBinding | null> {
 
     // Try to require the native binding
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const native = require("@ply2splat/native") as NativeBinding;
+    const native = require("ply2splat-native") as NativeBinding;
     native.isNative = true;
     return native;
   } catch {

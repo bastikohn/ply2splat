@@ -4,7 +4,7 @@ Convert Gaussian Splatting PLY files to SPLAT format with **Dual-Backend Support
 
 This package automatically selects the best available backend for your environment:
 
-1.  **Native Node.js Bindings**: Used automatically when running in Node.js if the optional `@ply2splat/native` package is installed and supported on your platform. This offers **maximum performance** using multi-threading (rayon) and AVX/SIMD instructions.
+1.  **Native Node.js Bindings**: Used automatically when running in Node.js if the optional `ply2splat-native` package is installed and supported on your platform. This offers **maximum performance** using multi-threading (rayon) and AVX/SIMD instructions.
 2.  **WebAssembly (WASM)**: Used in browsers or as a fallback in Node.js. Provides excellent compatibility and respectable performance.
 
 ## Features
@@ -21,7 +21,7 @@ This package automatically selects the best available backend for your environme
 npm install ply2splat
 ```
 
-*Note: The native bindings (`@ply2splat/native`) are an optional dependency. npm will try to install them automatically. If installation fails (e.g., unsupported OS), `ply2splat` will transparently fall back to the WASM implementation.*
+*Note: The native bindings (`ply2splat-native`) are an optional dependency. npm will try to install them automatically. If installation fails (e.g., unsupported OS), `ply2splat` will transparently fall back to the WASM implementation.*
 
 ## Usage
 
@@ -76,7 +76,7 @@ result.free();
 This package also enables running the high-performance Rust CLI directly via `npx` without compiling from source:
 
 ```bash
-npx @ply2splat/native --input model.ply --output model.splat
+npx ply2splat-native --input model.ply --output model.splat
 ```
 
 ## API Reference
