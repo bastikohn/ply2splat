@@ -139,10 +139,13 @@ if __name__ == "__main__":
         response = input("Do you want to push changes and tags now? [y/N] ")
         if response.lower() == 'y':
             print("Pushing changes...")
-            subprocess.run(["git", "push", "--follow-tags"], check=True)
+            subprocess.run(["git", "push"], check=True)
+            tag_name = f"v{new_version}"
+            print(f"Pushing tag {tag_name}...")
+            subprocess.run(["git", "push", "origin", tag_name], check=True)
             print("Done.")
         else:
-            print("Skipping push. Remember to run: git push --follow-tags")
+            print(f"Skipping push. Remember to run: git push && git push origin v{new_version}")
         
     except Exception as e:
         print(f"Error: {e}")
