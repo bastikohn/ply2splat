@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "ply2splat"
-version = "0.4.3"
+version = "0.4.4"
 description = "A high-performance library for converting Gaussian Splatting PLY files to SPLAT format"
 readme = "README.md"
 license = { text = "MIT" }

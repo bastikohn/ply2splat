@@ -1,6 +1,6 @@
 {
   "name": "ply2splat-native",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Native Node.js bindings for ply2splat",
   "main": "index.js",
   "repository": {

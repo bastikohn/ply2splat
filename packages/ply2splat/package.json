@@ -1,6 +1,6 @@
 {
   "name": "ply2splat",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "description": "Convert Gaussian Splatting PLY files to SPLAT format - with native and WASM support",
   "type": "module",
   "main": "./dist/index.js",
@@ -46,6 +46,6 @@
     "@types/node": "^20.0.0"
   },
   "optionalDependencies": {
-    "ply2splat-native": "^0.4.3"
+    "ply2splat-native": "^0.4.4"
   }
 }
