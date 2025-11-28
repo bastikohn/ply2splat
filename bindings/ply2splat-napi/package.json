@@ -1,8 +1,9 @@
 {
-  "name": "ply2splat-native",
+  "name": "@ply2splat/node",
   "version": "0.4.4",
-  "description": "Native Node.js bindings for ply2splat",
+  "description": "Native Node.js bindings for ply2splat - Gaussian Splatting PLY to SPLAT conversion",
   "main": "index.js",
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/bastikohn/ply2splat"
@@ -11,18 +12,41 @@
   "bin": {
     "ply2splat": "./cli.js"
   },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "cli.js"
+  ],
   "scripts": {
-    "build": "napi build --platform --release",
-    "build:debug": "napi build --platform",
-    "prepublishOnly": "napi prepublish -t npm",
+    "build": "napi build --platform --release --js-package-name @ply2splat/node",
+    "build:debug": "napi build --platform --js-package-name @ply2splat/node",
     "artifacts": "napi artifacts",
     "version": "napi version"
   },
   "napi": {
-    "name": "ply2splat-native"
+    "binaryName": "ply2splat-node",
+    "packageName": "@ply2splat/node",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc",
+      "aarch64-pc-windows-msvc"
+    ]
   },
   "devDependencies": {
     "@napi-rs/cli": "^2.18.0"
+  },
+  "optionalDependencies": {
+    "@ply2splat/node-darwin-arm64": "0.4.4",
+    "@ply2splat/node-darwin-x64": "0.4.4",
+    "@ply2splat/node-linux-x64-gnu": "0.4.4",
+    "@ply2splat/node-linux-x64-musl": "0.4.4",
+    "@ply2splat/node-linux-arm64-gnu": "0.4.4",
+    "@ply2splat/node-win32-x64-msvc": "0.4.4",
+    "@ply2splat/node-win32-arm64-msvc": "0.4.4"
   },
   "engines": {
     "node": ">= 10"
