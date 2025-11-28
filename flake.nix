@@ -2,28 +2,40 @@
   description = "A high-performance Rust crate for processing Gaussian Splatting PLY and SPLAT files";
 
   inputs = {
+    fenix = {
+      url = "github:nix-community/fenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ (import rust-overlay) ];
-        pkgs = import nixpkgs {
-          inherit system overlays;
-        };
-      in
-      {
+  outputs = {
+    self,
+    fenix,
+    nixpkgs,
+    flake-utils,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (
+      system: let
+        pkgs = nixpkgs.legacyPackages.${system};
+        f = with fenix.packages.${system};
+          combine [
+            stable.toolchain
+            targets.wasm32-unknown-unknown.stable.rust-std
+          ];
+      in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
-            (rust-bin.stable.latest.default.override {
-              extensions = [ "rust-src" "rust-analyzer" ];
-            })
+            f
+            llvmPackages.bintools
             pkg-config
             cargo-fuzz
+            wasm-pack
+            nodejs_20
           ];
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_LINKER = "lld";
         };
       }
     );
