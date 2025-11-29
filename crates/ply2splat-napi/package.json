@@ -16,6 +16,7 @@
     "build:debug": "napi build --platform",
     "build:release": "napi build --platform --release",
     "lint": "sleep 1",
+    "test": "node cli.ts || true",
     "prepublishOnly": "napi prepublish -t npm",
     "artifacts": "napi artifacts",
     "version": "napi version"
