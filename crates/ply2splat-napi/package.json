@@ -63,5 +63,6 @@
     "@ply2splat/native-linux-arm64-musl": "0.4.4",
     "@ply2splat/native-win32-arm64-msvc": "0.4.4",
     "@ply2splat/native-android-arm-eabi": "0.4.4"
-  }
+  },
+  "packageManager": "pnpm@10.23.0"
 }
