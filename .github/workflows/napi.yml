@@ -52,7 +52,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: ESLint
         run: pnpm lint
@@ -153,7 +153,7 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm instal --no-frozen-lockfilel
       - name: Setup node x86
         uses: actions/setup-node@v6
         if: matrix.settings.target == 'i686-pc-windows-msvc'
@@ -217,7 +217,7 @@ jobs:
             env
             freebsd-version
             cd crates/ply2splat-napi
-            pnpm install
+            pnpm install --no-frozen-lockfile
             pnpm build
             rm -rf node_modules
             rm -rf target
@@ -262,7 +262,7 @@ jobs:
           architecture: ${{ matrix.settings.architecture }}
           cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
@@ -364,7 +364,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
@@ -399,7 +399,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Download all artifacts
         uses: actions/download-artifact@v6
         with:
