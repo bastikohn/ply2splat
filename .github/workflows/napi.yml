@@ -20,9 +20,6 @@ permissions:
       - .editorconfig
       - docs/**
   pull_request: null
-defaults:
-  run:
-    working-directory: ../crates/ply2splat-napi
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
