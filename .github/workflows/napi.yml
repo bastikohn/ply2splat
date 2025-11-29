@@ -1,7 +1,7 @@
 name: napi
 env:
   DEBUG: napi:*
-  APP_NAME: ply2splat
+  APP_NAME: ply2splat-native
   MACOSX_DEPLOYMENT_TARGET: "10.13"
   CARGO_INCREMENTAL: "1"
   NAPI_DIR: crates/ply2splat-napi
@@ -344,7 +344,7 @@ jobs:
         uses: addnab/docker-run-action@v3
         with:
           image: ${{ steps.docker.outputs.IMAGE }}
-          options: -v ${{ steps.docker.outputs.PNPM_STORE_PATH }}:${{ steps.docker.outputs.PNPM_STORE_PATH }} -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }} --platform ${{ steps.docker.outputs.PLATFORM }}
+          options: -v ${{ steps.docker.outputs.PNPM_STORE_PATH }}:${{ steps.docker.outputs.PNPM_STORE_PATH }} -v ${{ github.workspace }}:${{ github.workspace }} -w ${{ github.workspace }}/crate/ply2splat-napi --platform ${{ steps.docker.outputs.PLATFORM }}
           run: npm run test
   test-wasi:
     name: Test WASI target
