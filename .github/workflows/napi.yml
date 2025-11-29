@@ -31,6 +31,8 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      - name: Test
+        run: ls -la .
       - uses: actions/checkout@v5
       - name: setup pnpm
         uses: pnpm/action-setup@v4
