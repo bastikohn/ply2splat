@@ -3,7 +3,7 @@
 //! This crate exposes the core functionality of the ply2splat library to JavaScript
 //! via wasm-bindgen, allowing browser and Node.js users to convert PLY data to SPLAT format.
 
-use ply2splat::{load_ply_from_bytes, ply_to_splat, splats_to_bytes, SplatPoint};
+use ply2splat::{SplatPoint, load_ply_from_bytes, ply_to_splat, splats_to_bytes};
 use wasm_bindgen::prelude::*;
 
 /// Result of a PLY to SPLAT conversion.

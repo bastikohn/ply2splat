@@ -3,7 +3,7 @@
 //! This module exposes the core functionality of the ply2splat library to Python
 //! via PyO3, allowing Python users to convert PLY files to SPLAT format.
 
-use ply2splat_lib::{load_ply, ply_to_splat, save_splat, SplatPoint};
+use ply2splat_lib::{SplatPoint, load_ply, ply_to_splat, save_splat};
 use pyo3::exceptions::PyIOError;
 use pyo3::prelude::*;
 use std::fs::File;

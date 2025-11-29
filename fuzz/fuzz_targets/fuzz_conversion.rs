@@ -1,7 +1,7 @@
 #![no_main]
 use arbitrary::Arbitrary;
 use libfuzzer_sys::fuzz_target;
-use ply2splat::{ply_to_splat, PlyGaussian};
+use ply2splat::{PlyGaussian, ply_to_splat};
 
 #[derive(Arbitrary, Debug)]
 struct Input {

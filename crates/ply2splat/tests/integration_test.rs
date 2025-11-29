@@ -162,6 +162,6 @@ fn test_dataset_drjohnson() -> Result<(), Box<dyn std::error::Error>> {
     run_dataset_test(
         "https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset/drjohnson/point_cloud/iteration_30000/point_cloud.ply?download=true",
         "92f4898839ec4ad7f197cf6c74b89918b35ea712b4e41435593ccb152d22b7f5",
-        "1fa57e61226e54c0461de1535b77cd0c5264ec8c586e9ca2ff1ff6a5ab8fd2c2"
+        "1fa57e61226e54c0461de1535b77cd0c5264ec8c586e9ca2ff1ff6a5ab8fd2c2",
     )
 }
