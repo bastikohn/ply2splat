@@ -12,8 +12,9 @@
     "ply2splat": "./cli.js"
   },
   "scripts": {
-    "build": "napi build --platform --release",
+    "build": "pnpm run build:debug",
     "build:debug": "napi build --platform",
+    "build:release": "napi build --platform --release",
     "prepublishOnly": "napi prepublish -t npm",
     "artifacts": "napi artifacts",
     "version": "napi version"

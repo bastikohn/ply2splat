@@ -31,10 +31,13 @@
             f
             llvmPackages.bintools
             pkg-config
+            cargo
             cargo-fuzz
             wasm-pack
             nodejs_20
             pnpm
+            maturin
+            uv
           ];
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_LINKER = "lld";
         };

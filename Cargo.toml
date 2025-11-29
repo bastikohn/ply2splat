@@ -1,30 +1,16 @@
 [workspace]
-members = [
-    "bindings/ply2splat-wasm",
-    "bindings/ply2splat-python",
-    "bindings/ply2splat-napi",
-    "fuzz",
-]
-resolver = "2"
+members = ["crates/*"]
+resolver = "3"
 
-default-members = ["."]
+default-members = ["crates/ply2splat"]
 
 [workspace.package]
 version = "0.4.4"
-edition = "2021"
+edition = "2024"
 license = "MIT"
 repository = "https://github.com/bastikohn/ply2splat"
-
-# Legacy package configuration for backward compatibility
-# The actual library is now in crates/ply2splat-core
-[package]
-name = "ply2splat"
-version.workspace = true
-edition.workspace = true
 description = "A Rust crate for processing Gaussian Splatting PLY and SPLAT files"
-license.workspace = true
 readme = "README.md"
-repository.workspace = true
 keywords = ["graphics", "gaussian-splatting", "ply", "splat", "3d"]
 categories = ["command-line-utilities", "multimedia::encoding"]
 exclude = [
@@ -38,33 +24,3 @@ exclude = [
     "fuzz",
     "AGENTS.md",
 ]
-
-[features]
-default = ["cli", "parallel"]
-parallel = ["dep:rayon"]
-cli = ["dep:clap", "dep:indicatif"]
-
-[lib]
-name = "ply2splat"
-path = "src/lib.rs"
-
-[[bin]]
-name = "ply2splat"
-path = "src/bin/ply2splat.rs"
-required-features = ["cli"]
-
-[dependencies]
-ply-rs = "0.1"
-anyhow = "1.0"
-bytemuck = { version = "1.14", features = ["derive"] }
-rayon = { version = "1.8", optional = true }
-clap = { version = "4.4", features = ["derive"], optional = true }
-indicatif = { version = "0.18.3", optional = true }
-
-[dev-dependencies]
-tempfile = "3.8"
-assert_cmd = "2.0"
-predicates = "3.0"
-reqwest = { version = "0.12.24", features = ["blocking", "rustls-tls"] }
-sha2 = "0.10"
-hex = "0.4"

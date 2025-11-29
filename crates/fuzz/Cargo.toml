@@ -1,15 +1,13 @@
 [package]
 name = "ply2splat-fuzz"
-version = "0.0.0"
-publish = false
-edition = "2021"
-
-[package.metadata]
-cargo-fuzz = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-ply2splat = { path = ".." }
+ply2splat = { path = "../ply2splat" }
 arbitrary = { version = "1", features = ["derive"] }
 
 [[bin]]

@@ -2,11 +2,11 @@ name: Python
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
     tags:
-      - 'v*'
+      - "v*"
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
@@ -41,7 +41,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -52,7 +52,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --release --out dist -i 3.9 3.10 3.11 3.12 3.13 --manifest-path bindings/ply2splat-python/Cargo.toml
+          args: --release --out dist -i 3.9 3.10 3.11 3.12 3.13 --manifest-path crates/ply2splat-python/Cargo.toml
           manylinux: auto
 
       - name: Test wheel
@@ -79,7 +79,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           command: sdist
-          args: --out dist --manifest-path bindings/ply2splat-python/Cargo.toml
+          args: --out dist --manifest-path crates/ply2splat-python/Cargo.toml
 
       - name: Upload sdist
         uses: actions/upload-artifact@v4

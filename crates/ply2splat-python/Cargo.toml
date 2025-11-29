@@ -14,7 +14,7 @@ name = "ply2splat"
 crate-type = ["cdylib"]
 
 [dependencies]
-ply2splat_lib = { package = "ply2splat", path = "../..", features = [
+ply2splat_lib = { package = "ply2splat", path = "../ply2splat", features = [
     "parallel",
 ] }
 pyo3 = { version = "0.23", features = ["extension-module"] }
