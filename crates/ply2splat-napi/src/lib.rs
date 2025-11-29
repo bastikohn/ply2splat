@@ -29,6 +29,11 @@ pub fn convert(ply_data: Buffer, sort: Option<bool>) -> Result<ConversionResult>
     })
 }
 
+#[napi]
+pub fn simple_fn() -> u32 {
+    1
+}
+
 /// Result of a PLY to SPLAT conversion.
 #[napi(object)]
 pub struct ConversionResult {

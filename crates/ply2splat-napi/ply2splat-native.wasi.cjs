@@ -111,3 +111,4 @@ module.exports = __napiModule.exports
 module.exports.cli = __napiModule.exports.cli
 module.exports.convert = __napiModule.exports.convert
 module.exports.getSplatCount = __napiModule.exports.getSplatCount
+module.exports.simpleFn = __napiModule.exports.simpleFn

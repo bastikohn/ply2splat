@@ -59,3 +59,4 @@ export default __napiModule.exports
 export const cli = __napiModule.exports.cli
 export const convert = __napiModule.exports.convert
 export const getSplatCount = __napiModule.exports.getSplatCount
+export const simpleFn = __napiModule.exports.simpleFn

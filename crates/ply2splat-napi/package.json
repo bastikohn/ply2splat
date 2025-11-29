@@ -3,20 +3,26 @@
   "version": "0.4.4",
   "description": "Native Node.js bindings for ply2splat",
   "main": "index.js",
+  "types": "index.d.ts",
   "repository": {
     "type": "git",
     "url": "https://github.com/bastikohn/ply2splat"
   },
   "license": "MIT",
   "bin": {
-    "ply2splat": "./cli.ts"
+    "ply2splat": "./cli.js"
   },
+  "files": [
+    "index.d.ts",
+    "index.js",
+    "browser.js"
+  ],
   "scripts": {
     "build": "pnpm run build:debug",
     "build:debug": "napi build --platform",
     "build:release": "napi build --platform --release",
-    "lint": "sleep 1",
-    "test": "node cli.ts || true",
+    "lint": "oxlint",
+    "test": "ava",
     "prepublishOnly": "napi prepublish -t npm",
     "artifacts": "napi artifacts",
     "version": "napi version"
@@ -43,7 +49,27 @@
   },
   "devDependencies": {
     "@napi-rs/cli": "^3.4.1",
-    "@types/node": "^24.10.1"
+    "@types/node": "^24.10.1",
+    "ava": "^6.4.1",
+    "oxlint": "^1.30.0",
+    "@oxc-node/core": "^0.0.34"
+  },
+  "prettier": {
+    "printWidth": 120
+  },
+  "ava": {
+    "extensions": {
+      "ts": "module"
+    },
+    "timeout": "2m",
+    "workerThreads": false,
+    "environmentVariables": {
+      "OXC_TSCONFIG_PATH": "./__test__/tsconfig.json"
+    },
+    "nodeArguments": [
+      "--import",
+      "@oxc-node/core/register"
+    ]
   },
   "engines": {
     "node": ">= 10"
@@ -53,19 +79,19 @@
     "access": "public"
   },
   "optionalDependencies": {
-    "@ply2splat/native-darwin-x64": "0.4.4",
-    "@ply2splat/native-darwin-arm64": "0.4.4",
-    "@ply2splat/native-linux-x64-gnu": "0.4.4",
-    "@ply2splat/native-win32-x64-msvc": "0.4.4",
-    "@ply2splat/native-linux-x64-musl": "0.4.4",
-    "@ply2splat/native-linux-arm64-gnu": "0.4.4",
-    "@ply2splat/native-win32-ia32-msvc": "0.4.4",
-    "@ply2splat/native-linux-arm-gnueabihf": "0.4.4",
+    "@ply2splat/native-android-arm-eabi": "0.4.4",
     "@ply2splat/native-android-arm64": "0.4.4",
+    "@ply2splat/native-darwin-arm64": "0.4.4",
+    "@ply2splat/native-darwin-x64": "0.4.4",
     "@ply2splat/native-freebsd-x64": "0.4.4",
+    "@ply2splat/native-linux-arm-gnueabihf": "0.4.4",
+    "@ply2splat/native-linux-arm64-gnu": "0.4.4",
     "@ply2splat/native-linux-arm64-musl": "0.4.4",
+    "@ply2splat/native-linux-x64-gnu": "0.4.4",
+    "@ply2splat/native-linux-x64-musl": "0.4.4",
     "@ply2splat/native-win32-arm64-msvc": "0.4.4",
-    "@ply2splat/native-android-arm-eabi": "0.4.4"
+    "@ply2splat/native-win32-ia32-msvc": "0.4.4",
+    "@ply2splat/native-win32-x64-msvc": "0.4.4"
   },
   "packageManager": "pnpm@10.23.0"
 }

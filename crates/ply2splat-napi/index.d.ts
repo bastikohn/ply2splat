@@ -31,3 +31,5 @@ export declare function convert(plyData: Buffer, sort?: boolean | undefined | nu
  * @returns Number of splats in the data
  */
 export declare function getSplatCount(splatData: Buffer): number
+
+export declare function simpleFn(): number
