@@ -324,7 +324,7 @@ jobs:
           echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
       # use --force to download the all platform/arch dependencies
       - name: Install dependencies
-        run: pnpm install --force
+        run: pnpm install --force --no-frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
