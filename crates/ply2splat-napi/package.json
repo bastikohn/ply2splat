@@ -48,18 +48,22 @@
     ]
   },
   "devDependencies": {
+    "@ava/typescript": "^6.0.0",
     "@napi-rs/cli": "^3.4.1",
+    "@oxc-node/core": "^0.0.34",
     "@types/node": "^24.10.1",
     "ava": "^6.4.1",
-    "oxlint": "^1.30.0",
-    "@oxc-node/core": "^0.0.34"
+    "oxlint": "^1.30.0"
   },
   "prettier": {
     "printWidth": 120
   },
   "ava": {
-    "extensions": {
-      "ts": "module"
+    "typescript": {
+      "rewritePaths": {
+        "src/": "build/"
+      },
+      "compile": false
     },
     "timeout": "2m",
     "workerThreads": false,
