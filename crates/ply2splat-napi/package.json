@@ -1,5 +1,5 @@
 {
-  "name": "ply2splat-native",
+  "name": "@ply2splat/native",
   "version": "0.4.4",
   "description": "Native Node.js bindings for ply2splat",
   "main": "index.js",
@@ -9,7 +9,7 @@
   },
   "license": "MIT",
   "bin": {
-    "ply2splat": "./cli.js"
+    "ply2splat": "./cli.ts"
   },
   "scripts": {
     "build": "pnpm run build:debug",
@@ -20,10 +20,27 @@
     "version": "napi version"
   },
   "napi": {
-    "name": "ply2splat-native"
+    "binaryName": "ply2splat-native",
+    "packageName": "@ply2splat/native",
+    "targets": [
+      "x86_64-apple-darwin",
+      "aarch64-apple-darwin",
+      "x86_64-unknown-linux-gnu",
+      "x86_64-pc-windows-msvc",
+      "x86_64-unknown-linux-musl",
+      "aarch64-unknown-linux-gnu",
+      "i686-pc-windows-msvc",
+      "armv7-unknown-linux-gnueabihf",
+      "aarch64-linux-android",
+      "x86_64-unknown-freebsd",
+      "aarch64-unknown-linux-musl",
+      "aarch64-pc-windows-msvc",
+      "armv7-linux-androideabi"
+    ]
   },
   "devDependencies": {
-    "@napi-rs/cli": "^2.18.0"
+    "@napi-rs/cli": "^3.4.1",
+    "@types/node": "^24.10.1"
   },
   "engines": {
     "node": ">= 10"
@@ -31,5 +48,20 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
+  },
+  "optionalDependencies": {
+    "@ply2splat/native-darwin-x64": "0.4.4",
+    "@ply2splat/native-darwin-arm64": "0.4.4",
+    "@ply2splat/native-linux-x64-gnu": "0.4.4",
+    "@ply2splat/native-win32-x64-msvc": "0.4.4",
+    "@ply2splat/native-linux-x64-musl": "0.4.4",
+    "@ply2splat/native-linux-arm64-gnu": "0.4.4",
+    "@ply2splat/native-win32-ia32-msvc": "0.4.4",
+    "@ply2splat/native-linux-arm-gnueabihf": "0.4.4",
+    "@ply2splat/native-android-arm64": "0.4.4",
+    "@ply2splat/native-freebsd-x64": "0.4.4",
+    "@ply2splat/native-linux-arm64-musl": "0.4.4",
+    "@ply2splat/native-win32-arm64-msvc": "0.4.4",
+    "@ply2splat/native-android-arm-eabi": "0.4.4"
   }
 }

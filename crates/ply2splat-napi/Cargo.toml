@@ -14,8 +14,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 ply2splat = { path = "../ply2splat", features = ["parallel", "cli"] }
-napi = { version = "2", features = ["napi4"] }
-napi-derive = "2"
+napi = { version = "3.0.0" }
+napi-derive = "3.0.0"
 
 [build-dependencies]
 napi-build = "2"

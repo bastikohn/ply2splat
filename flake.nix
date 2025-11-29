@@ -34,7 +34,7 @@
             cargo
             cargo-fuzz
             wasm-pack
-            nodejs_20
+            nodejs_22
             pnpm
             maturin
             uv
