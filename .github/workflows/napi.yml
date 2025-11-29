@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Test
-        run: ls -la .
+        run: ls -la . && cat package.json
       - name: setup pnpm
         uses: pnpm/action-setup@v4
       - name: Setup node
