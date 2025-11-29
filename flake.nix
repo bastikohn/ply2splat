@@ -34,6 +34,7 @@
             cargo-fuzz
             wasm-pack
             nodejs_20
+            pnpm
           ];
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_LINKER = "lld";
         };
