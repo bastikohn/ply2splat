@@ -10,7 +10,7 @@ cargo-fuzz = true
 
 [dependencies]
 libfuzzer-sys = "0.4"
-ply2splat = { path = "../ply2splat" }
+ply2splat = { path = "../../ply2splat" }
 arbitrary = { version = "1", features = ["derive"] }
 
 [[bin]]
