@@ -3,8 +3,8 @@ name: CI
 on:
   push:
     branches: [ "main" ]
-    tags:
-      - 'v*'
+    tags-ignore:
+      - "**"
   pull_request:
     branches: [ "main" ]
 
@@ -63,7 +63,6 @@ jobs:
 
   build-release:
     name: Build Release
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -114,20 +113,32 @@ jobs:
   create-release:
     name: Create Release
     needs: [test, fmt, clippy, build-release]
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Check Release
+        id: check_release
+        run: |
+          MESSAGE=$(git log -1 --pretty=%B)
+          echo "Commit message: $MESSAGE"
+          if echo "$MESSAGE" | grep -q "^v[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "Not a release commit."
+          fi
       - name: Download Artifacts
         uses: actions/download-artifact@v4
       - name: Display Structure
         run: ls -R
       - name: Release
+        if: steps.check_release.outputs.is_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.event.head_commit.message }}
+          name: ${{ github.event.head_commit.message }}
           files: |
             */*.tar.gz
             */*.zip
@@ -135,13 +146,23 @@ jobs:
   publish-crate:
     name: Publish to Crates.io
     needs: [test, fmt, clippy]
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Check Release
+        id: check_release
+        run: |
+          MESSAGE=$(git log -1 --pretty=%B)
+          echo "Commit message: $MESSAGE"
+          if echo "$MESSAGE" | grep -q "^v[0-9]\+\.[0-9]\+\.[0-9]\+$"; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "Not a release commit."
+          fi
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Publish ply2splat
+        if: steps.check_release.outputs.is_release == 'true'
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: cargo publish -p ply2splat

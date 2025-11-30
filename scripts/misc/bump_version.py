@@ -86,7 +86,7 @@ def run_git_commands(version, files):
         result = subprocess.run(["git", "diff", "--cached", "--quiet"])
         
         if result.returncode == 1: # Changes detected
-            commit_msg = f"chore: bump version to {version}"
+            commit_msg = f"v{version}"
             subprocess.run(["git", "commit", "-m", commit_msg], check=True)
             print(f"Committed changes: {commit_msg}")
         else:
