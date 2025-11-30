@@ -26,7 +26,8 @@ def bump_cargo_toml(new_version):
         f.write(new_content)
     print(f"Updated {path}")
 
-def bump_npm_package(path, new_version, update_dep=False):
+def bump_napi_package(new_version):
+    path = 'crates/ply2splat-napi/package.json'
     if not os.path.exists(path):
         print(f"Skipping {path} (not found)")
         return
@@ -42,13 +43,13 @@ def bump_npm_package(path, new_version, update_dep=False):
         count=1 
     )
     
-    if update_dep:
-        # Update optionalDependencies ply2splat-native to use caret version
-        content = re.sub(
-            r'("ply2splat-native":\s*"\^)([^"]+)(")',
-            r'\g<1>' + new_version + r'\g<3>',
-            content
-        )
+    # Update optionalDependencies for @ply2splat/native-* packages
+    # matches "@ply2splat/native-something": "0.4.4"
+    content = re.sub(
+        r'("@ply2splat/native-[^"]+":\s*")([^"]+)(")',
+        r'\g<1>' + new_version + r'\g<3>',
+        content
+    )
 
     with open(path, 'w') as f:
         f.write(content)
@@ -121,15 +122,13 @@ if __name__ == "__main__":
     
     files_to_update = [
         'Cargo.toml',
-        'packages/ply2splat/package.json',
-        'bindings/ply2splat-napi/package.json',
+        'crates/ply2splat-napi/package.json',
         'pyproject.toml'
     ]
 
     try:
         bump_cargo_toml(new_version)
-        bump_npm_package('packages/ply2splat/package.json', new_version, update_dep=True)
-        bump_npm_package('bindings/ply2splat-napi/package.json', new_version)
+        bump_napi_package(new_version)
         bump_pyproject(new_version)
         print(f"Successfully updated files to {new_version}")
         
