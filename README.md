@@ -41,7 +41,7 @@ Add `ply2splat` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ply2splat = "0.4"
+ply2splat = "0.5"
 ```
 
 ### CLI
@@ -64,19 +64,18 @@ The binary will be available at `target/release/ply2splat`.
 
 ### Python Package
 
-Install from [PyPI](https://pypi.org/project/ply2splat/):
+Install from [PyPI](https://pypi.org/project/ply2splat/) using `uv`:
 
 ```bash
-pip install ply2splat
+uv pip install ply2splat
 ```
 
-Or install from source using [maturin](https://github.com/PyO3/maturin):
+Or install from source:
 
 ```bash
-pip install maturin
 git clone https://github.com/bastikohn/ply2splat.git
 cd ply2splat
-maturin develop --release
+uv pip install .
 ```
 
 ### npm Package (Node.js & Web)
@@ -99,6 +98,14 @@ This package provides high-performance native bindings for Node.js and falls bac
 ply2splat --input input.ply --output output.splat
 ```
 
+#### Run via uvx (Python)
+
+If you have `uv` installed, you can run the CLI directly without explicit installation:
+
+```bash
+uvx ply2splat --input input.ply --output output.splat
+```
+
 #### Native CLI via Node.js
 
 You can also run the high-performance Rust CLI directly via Node.js without installing Rust or compiling the binary manually.
@@ -107,6 +114,8 @@ You can also run the high-performance Rust CLI directly via Node.js without inst
 # Run directly via npx
 npx @ply2splat/native --input input.ply --output output.splat
 ```
+
+
 
 ### Python
 
@@ -171,7 +180,7 @@ console.log(`Output size: ${result.data.length} bytes`);
 
 - Rust (latest stable)
 - Node.js & pnpm (for JS bindings)
-- Python & maturin (for Python bindings)
+- Python & uv (for Python bindings)
 
 ### Running Tests
 
