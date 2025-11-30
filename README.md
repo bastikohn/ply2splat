@@ -106,6 +106,14 @@ If you have `uv` installed, you can run the CLI directly without explicit instal
 uvx ply2splat --input input.ply --output output.splat
 ```
 
+#### Run via Nix
+
+If you have Nix installed:
+
+```bash
+nix run github:bastikohn/ply2splat -- --input input.ply --output output.splat
+```
+
 #### Native CLI via Node.js
 
 You can also run the high-performance Rust CLI directly via Node.js without installing Rust or compiling the binary manually.

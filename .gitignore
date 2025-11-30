@@ -26,6 +26,3 @@ packages/*/wasm/
 packages/*/*.tsbuildinfo
 node_modules/
 package-lock.json
-
-# Cargo lock for workspace
-Cargo.lock
