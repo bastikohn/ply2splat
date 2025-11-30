@@ -30,6 +30,9 @@ classifiers = [
 Homepage = "https://github.com/bastikohn/ply2splat"
 Repository = "https://github.com/bastikohn/ply2splat"
 
+[project.scripts]
+ply2splat = "ply2splat:main"
+
 [tool.maturin]
 manifest-path = "crates/ply2splat-python/Cargo.toml"
 include = ["LICENSE"]

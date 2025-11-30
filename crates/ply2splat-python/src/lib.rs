@@ -233,6 +233,15 @@ fn load_splat_file(input_path: &str) -> PyResult<SplatData> {
     Ok(SplatData { splats })
 }
 
+/// Run the ply2splat CLI.
+#[pyfunction]
+fn main(py: Python<'_>) -> PyResult<()> {
+    let sys = py.import("sys")?;
+    let args: Vec<String> = sys.getattr("argv")?.extract()?;
+    ply2splat_lib::cli::run(args).map_err(|e| PyIOError::new_err(e.to_string()))?;
+    Ok(())
+}
+
 /// A ply2splat module for converting Gaussian Splatting PLY files to SPLAT format.
 #[pymodule]
 fn ply2splat(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -242,5 +251,6 @@ fn ply2splat(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(load_and_convert, m)?)?;
     m.add_function(wrap_pyfunction!(load_ply_file, m)?)?;
     m.add_function(wrap_pyfunction!(load_splat_file, m)?)?;
+    m.add_function(wrap_pyfunction!(main, m)?)?;
     Ok(())
 }
