@@ -7,7 +7,7 @@ name = "ply2splat"
 version = "0.5.0"
 description = "A high-performance library for converting Gaussian Splatting PLY files to SPLAT format"
 readme = "README.md"
-license = { text = "MIT" }
+license = { file = "LICENSE" }
 requires-python = ">=3.9"
 keywords = ["graphics", "gaussian-splatting", "ply", "splat", "3d", "rendering"]
 classifiers = [
@@ -32,3 +32,4 @@ Repository = "https://github.com/bastikohn/ply2splat"
 
 [tool.maturin]
 manifest-path = "crates/ply2splat-python/Cargo.toml"
+include = ["LICENSE"]
