@@ -1,21 +1,70 @@
-Welcome to your new TanStack app! 
+# PLY to SPLAT Web Converter
 
-# Getting Started
+A browser-based converter for transforming 3D Gaussian Splatting PLY files to the optimized SPLAT format. This application runs entirely in your browser using WebAssembly, ensuring your files never leave your device.
 
-To run this application:
+## Features
+
+- **100% Private**: All processing happens locally in your browser
+- **Fast**: Powered by WebAssembly for near-native performance
+- **Easy to Use**: Simple drag-and-drop interface
+- **No Installation**: Access directly through GitHub Pages
+
+## Live Demo
+
+Visit the live application at: **https://bastikohn.github.io/ply2splat/**
+
+## Development
+
+### Getting Started
+
+To run this application locally:
 
 ```bash
 pnpm install
-pnpm start
+pnpm dev
 ```
 
-# Building For Production
+The app will be available at `http://localhost:3000`.
+
+### Building For Production
 
 To build this application for production:
 
 ```bash
 pnpm build
 ```
+
+The built files will be in the `dist` directory.
+
+### Building for GitHub Pages
+
+To build with the correct base path for GitHub Pages:
+
+```bash
+VITE_BASE_PATH=/ply2splat/ pnpm build
+```
+
+## Deployment
+
+This application is automatically deployed to GitHub Pages when changes are pushed to the `main` branch. The deployment is handled by the `.github/workflows/deploy-gh-pages.yml` workflow.
+
+### Manual Deployment
+
+To manually deploy to GitHub Pages:
+
+1. Ensure GitHub Pages is enabled in the repository settings
+2. Set the source to "GitHub Actions"
+3. Push changes to the `main` branch or manually trigger the workflow
+
+## Technology Stack
+
+- **React 19** - UI framework
+- **Vite** - Build tool
+- **TanStack Router** - File-based routing
+- **TanStack Query** - Data fetching and caching
+- **Tailwind CSS** - Styling
+- **WebAssembly (WASI)** - High-performance PLY to SPLAT conversion
+- **@ply2splat/native-wasm32-wasi** - WASM bindings for ply2splat
 
 ## Testing
 

@@ -14,6 +14,7 @@
   "dependencies": {
     "@napi-rs/wasm-runtime": "^1.0.7",
     "@ply2splat/native": "link:../../crates/ply2splat-napi",
+    "@ply2splat/native-wasm32-wasi": "^0.5.2",
     "@radix-ui/react-slot": "^1.2.4",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
