@@ -14,6 +14,9 @@ importers:
       '@ply2splat/native':
         specifier: link:../../crates/ply2splat-napi
         version: link:../../crates/ply2splat-napi
+      '@ply2splat/native-wasm32-wasi':
+        specifier: ^0.5.2
+        version: 0.5.2
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.7)(react@19.2.0)
@@ -698,6 +701,11 @@ packages:
 
   '@napi-rs/wasm-runtime@1.0.7':
     resolution: {integrity: sha512-SeDnOO0Tk7Okiq6DbXmmBODgOAb9dp9gjlphokTUxmt8U3liIP1ZsozBahH69j/RJv+Rfs6IwUKHTgQYJ/HBAw==}
+
+  '@ply2splat/native-wasm32-wasi@0.5.2':
+    resolution: {integrity: sha512-9Lhzwp0uCTpU7luCwcwpcb7TLv60Bq9vDvnUHFgDPQvzIEHZKs5urJGqEL1yDqs/b6ftyTLJWO6MtgdLTwNmnA==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
 
   '@radix-ui/react-compose-refs@1.1.2':
     resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==}
@@ -2445,6 +2453,10 @@ snapshots:
       '@emnapi/core': 1.7.1
       '@emnapi/runtime': 1.7.1
       '@tybys/wasm-util': 0.10.1
+
+  '@ply2splat/native-wasm32-wasi@0.5.2':
+    dependencies:
+      '@napi-rs/wasm-runtime': 1.0.7
 
   '@radix-ui/react-compose-refs@1.1.2(@types/react@19.2.7)(react@19.2.0)':
     dependencies:

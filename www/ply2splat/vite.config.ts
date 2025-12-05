@@ -6,8 +6,6 @@ import tailwindcss from '@tailwindcss/vite'
 import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import { fileURLToPath, URL } from 'node:url'
 
-const napiDir = fileURLToPath(new URL('../../crates/ply2splat-napi', import.meta.url))
-
 // Plugin to ensure COOP/COEP headers are set for SharedArrayBuffer support
 function crossOriginIsolation(): Plugin {
   return {
@@ -31,6 +29,10 @@ function crossOriginIsolation(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // Set base path for GitHub Pages deployment
+  // Use repository name when VITE_BASE_PATH is set (for GitHub Pages)
+  // Otherwise use root path for local development
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     crossOriginIsolation(),
     devtools(),
@@ -48,22 +50,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      // Alias files from @ply2splat/native for browser usage
-      '@ply2splat/native/ply2splat-native.wasm32-wasi.wasm': `${napiDir}/ply2splat-native.wasm32-wasi.wasm`,
-      '@ply2splat/native/wasi-worker-browser.mjs': `${napiDir}/wasi-worker-browser.mjs`,
-    },
-  },
-  server: {
-    fs: {
-      // Allow serving files from the napi crate directory
-      allow: ['.', napiDir],
     },
   },
   worker: {
     format: 'es',
   },
   optimizeDeps: {
-    exclude: ['@ply2splat/native', '@napi-rs/wasm-runtime'],
+    exclude: ['@ply2splat/native', '@ply2splat/native-wasm32-wasi', '@napi-rs/wasm-runtime'],
   },
   build: {
     target: 'esnext',
