@@ -1,4 +1,9 @@
 // Worker for running ply2splat WASM conversion
+
+// IMPORTANT: Import polyfill BEFORE @napi-rs/wasm-runtime
+// Imports are evaluated in order, so this ensures Buffer is set globally first.
+import "./worker-polyfill.js";
+
 import {
   getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
@@ -43,14 +48,17 @@ async function initWasm(wasmUrl, wasiWorkerUrl) {
     __wasmFile,
     {
       context: __emnapiContext,
-      // asyncWorkPoolSize: 0, // Disable thread pool - not needed for conversion
+      asyncWorkPoolSize: 4,
       wasi: __wasi,
       onCreateWorker() {
-        // This shouldn't be called with asyncWorkPoolSize: 0
         console.log(
           "[ply2splat worker] Creating child worker at:",
           absoluteWorkerUrl,
         );
+        const worker = new Worker(absoluteWorkerUrl, {
+          type: "module",
+        });
+        return worker;
       },
       overwriteImports(importObject) {
         importObject.env = {
@@ -99,14 +107,19 @@ self.onmessage = async (e) => {
         "[ply2splat worker] Conversion complete, splats:",
         result.count,
       );
+
+      // Create a copy of the data because the original is in SharedArrayBuffer
+      // which cannot be transferred.
+      const dataCopy = new Uint8Array(result.data);
+
       // Transfer the buffer back to main thread
       self.postMessage(
         {
           type: "convert-complete",
           id,
-          result: { data: result.data, count: result.count },
+          result: { data: dataCopy, count: result.count },
         },
-        [result.data.buffer],
+        [dataCopy.buffer],
       );
     }
   } catch (error) {

@@ -1,6 +1,6 @@
 // Wrapper that runs ply2splat in a Web Worker
 import wasmUrl from '@ply2splat/native/ply2splat-native.wasm32-wasi.wasm?url'
-import wasiWorkerUrl from '@ply2splat/native/wasi-worker-browser.mjs?url'
+import wasiWorkerUrl from './wasi-worker-wrapper.js?worker&url'
 import Ply2SplatWorker from './ply2splat.worker.js?worker'
 
 export interface ConversionResult {
