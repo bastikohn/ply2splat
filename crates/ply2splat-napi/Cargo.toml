@@ -13,7 +13,7 @@ categories = ["multimedia::encoding"]
 crate-type = ["cdylib"]
 
 [dependencies]
-ply2splat = { path = "../ply2splat", features = ["parallel", "cli"] }
+ply2splat = { path = "../ply2splat", features = ["cli"], default-features = false }
 napi = { version = "3.0.0" }
 napi-derive = "3.0.0"
 
