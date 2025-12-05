@@ -76,6 +76,47 @@ def bump_pyproject(new_version):
         f.write(new_content)
     print(f"Updated {path}")
 
+def regenerate_lock_files():
+    """Regenerate lock files to sync with updated manifests.
+    
+    Returns:
+        True if all lock files were regenerated successfully, False otherwise.
+    """
+    success = True
+    
+    # Cargo.lock - run cargo check to update (includes fuzz crate as part of workspace)
+    if os.path.exists('Cargo.toml'):
+        print("Regenerating Cargo.lock...")
+        result = subprocess.run(["cargo", "check", "--workspace"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error: cargo check failed: {result.stderr}")
+            success = False
+        else:
+            print("Updated Cargo.lock")
+    
+    # pnpm-lock.yaml - run pnpm install
+    napi_dir = 'crates/ply2splat-napi'
+    if os.path.exists(os.path.join(napi_dir, 'package.json')):
+        print("Regenerating pnpm-lock.yaml...")
+        result = subprocess.run(["pnpm", "install", "--lockfile-only"], cwd=napi_dir, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error: pnpm install failed: {result.stderr}")
+            success = False
+        else:
+            print("Updated pnpm-lock.yaml")
+    
+    # uv.lock - run uv lock
+    if os.path.exists('pyproject.toml'):
+        print("Regenerating uv.lock...")
+        result = subprocess.run(["uv", "lock"], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Error: uv lock failed: {result.stderr}")
+            success = False
+        else:
+            print("Updated uv.lock")
+    
+    return success
+
 def run_git_commands(version, files):
     try:
         # Stage specific changes
@@ -122,15 +163,23 @@ if __name__ == "__main__":
     
     files_to_update = [
         'Cargo.toml',
+        'Cargo.lock',
         'crates/ply2splat-napi/package.json',
-        'pyproject.toml'
+        'crates/ply2splat-napi/pnpm-lock.yaml',
+        'pyproject.toml',
+        'uv.lock',
     ]
 
     try:
         bump_cargo_toml(new_version)
         bump_napi_package(new_version)
         bump_pyproject(new_version)
-        print(f"Successfully updated files to {new_version}")
+        print(f"Successfully updated manifest files to {new_version}")
+        
+        if not regenerate_lock_files():
+            print("Error: Failed to regenerate one or more lock files. Aborting.")
+            sys.exit(1)
+        print(f"Successfully regenerated lock files")
         
         run_git_commands(new_version, files_to_update)
 
