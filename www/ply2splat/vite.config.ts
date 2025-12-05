@@ -30,8 +30,8 @@ function crossOriginIsolation(): Plugin {
 // https://vitejs.dev/config/
 export default defineConfig({
   // Set base path for GitHub Pages deployment
-  // Use repository name when VITE_BASE_PATH is set (for GitHub Pages)
-  // Otherwise use root path for local development
+  // - When VITE_BASE_PATH is set (e.g., /ply2splat/): Uses that path for GitHub Pages
+  // - When not set (local dev): Uses root path (/) for localhost
   base: process.env.VITE_BASE_PATH || '/',
   plugins: [
     crossOriginIsolation(),
