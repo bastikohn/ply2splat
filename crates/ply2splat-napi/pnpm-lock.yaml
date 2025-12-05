@@ -18,6 +18,9 @@ importers:
       '@napi-rs/cli':
         specifier: ^3.4.1
         version: 3.4.1(@emnapi/runtime@1.7.1)(@types/node@24.10.1)
+      '@napi-rs/wasm-tools':
+        specifier: ^1.0.1
+        version: 1.0.1
       '@oxc-node/core':
         specifier: ^0.0.34
         version: 0.0.34
@@ -30,6 +33,46 @@ importers:
       oxlint:
         specifier: ^1.30.0
         version: 1.30.0
+    optionalDependencies:
+      '@ply2splat/native-android-arm-eabi':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-android-arm64':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-darwin-arm64':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-darwin-x64':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-freebsd-x64':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-linux-arm-gnueabihf':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-linux-arm64-gnu':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-linux-arm64-musl':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-linux-x64-gnu':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-linux-x64-musl':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-win32-arm64-msvc':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-win32-ia32-msvc':
+        specifier: 0.5.2
+        version: 0.5.2
+      '@ply2splat/native-win32-x64-msvc':
+        specifier: 0.5.2
+        version: 0.5.2
 
 packages:
 
@@ -721,6 +764,84 @@ packages:
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
+
+  '@ply2splat/native-android-arm-eabi@0.5.2':
+    resolution: {integrity: sha512-WUpSf2gGxue+QGW9Z2k2SuXobAWI3SxRM2RsUpHRzr9B3xLP61+jk8IF4Xp2hhGd8+BUbSEhdoXyleFDT6Ob1A==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [android]
+
+  '@ply2splat/native-android-arm64@0.5.2':
+    resolution: {integrity: sha512-oKUt84ySu58+hjF8xNTCkIDm4ng5031M4NESvE/EbkEj5S0YNk9mgYmSfppmhwlLc+z655nbBbfDgFuFpKDDBA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@ply2splat/native-darwin-arm64@0.5.2':
+    resolution: {integrity: sha512-sNW6dr26mNXm4bxNnR8QCQuTMnP3cHFaAQ1DXlwhMwJ18kPbEGC61ozADAv1BmeSWGpt9vb+q0ynjZ9u4oH8YQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ply2splat/native-darwin-x64@0.5.2':
+    resolution: {integrity: sha512-FM6rKkt3qf3sljb4ifxENcx7ok8NUBA4RwinplZSVLTn1bMZkO0dJfOgQfdH8VkemGNXGNX3SDO83isxCuME0A==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ply2splat/native-freebsd-x64@0.5.2':
+    resolution: {integrity: sha512-f1LRmspVfwFdTJ0eEfjUdbKYjJKNT+f5UgoaqF9pWlKILau07zGSP6GYJEapYAwWsUCwzTq6yIymJKAVsMnW7w==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
+  '@ply2splat/native-linux-arm-gnueabihf@0.5.2':
+    resolution: {integrity: sha512-HZISnt3iInbRRrPTPOLPEgQMBywWr//cILobfm/d1A0MgYlF2/1mQjZs5Fue0H89t2t0mRnBHDnU2ONYdW1lcQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@ply2splat/native-linux-arm64-gnu@0.5.2':
+    resolution: {integrity: sha512-//OypSNx16992Fz27B6mNSYqHxum7eYkr9WvQTBqhJf5P7BjxqkUOzYtIA1vmz3As1RgpcPHmsn7fb1TlsZdLQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@ply2splat/native-linux-arm64-musl@0.5.2':
+    resolution: {integrity: sha512-qYd/YRUZHopFAGARI9bRGDPdZpgqmtZadPoUcf0ijz1WwlMWHX6EuOVzzT+QkXJitsW7eSisV653rcJfezGlkQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@ply2splat/native-linux-x64-gnu@0.5.2':
+    resolution: {integrity: sha512-qSklXB7O+8gZzSh0JFtJrATVCvtBt7Io/h680ms4R1Lq+xcfSMRAmyzeWfCdvGllqezO4BXw4zqE6Pgq2NJ4CQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@ply2splat/native-linux-x64-musl@0.5.2':
+    resolution: {integrity: sha512-XlmxnFpZAMPCv6Pc8AihcSLzPTJyAZcfAAbDS4F+QvhWwwF8kEv3y0gO+0ggtki70sIVeKu+RvDAYIO4OmNryg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@ply2splat/native-win32-arm64-msvc@0.5.2':
+    resolution: {integrity: sha512-vcKplsw50DWo1UoTeHDVOEld29JduyXslY8Mg4AhzoCifsxZM8gFd9Tq4MOiIb5B16IbXy+GURGRBoiXxjwp9Q==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ply2splat/native-win32-ia32-msvc@0.5.2':
+    resolution: {integrity: sha512-D68cNQIPFA5i24OvfnedEMVGbbqELeJDwstp3pWp1dj8a6v0di6PW7wn1T2y/ru/K+O8N0tgQDvGpQYmhBCI2g==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@ply2splat/native-win32-x64-msvc@0.5.2':
+    resolution: {integrity: sha512-In91HWewmPbvh+S3S2nQ1EXkiYgvgJbKZ/Fr+3krhK1nEhS5PyKS32UFUFIgLKM9t+W8kxp7mB4hJI2Lfr76kg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
 
   '@rollup/pluginutils@5.3.0':
     resolution: {integrity: sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q==}
@@ -2059,6 +2180,45 @@ snapshots:
     optional: true
 
   '@pkgjs/parseargs@0.11.0':
+    optional: true
+
+  '@ply2splat/native-android-arm-eabi@0.5.2':
+    optional: true
+
+  '@ply2splat/native-android-arm64@0.5.2':
+    optional: true
+
+  '@ply2splat/native-darwin-arm64@0.5.2':
+    optional: true
+
+  '@ply2splat/native-darwin-x64@0.5.2':
+    optional: true
+
+  '@ply2splat/native-freebsd-x64@0.5.2':
+    optional: true
+
+  '@ply2splat/native-linux-arm-gnueabihf@0.5.2':
+    optional: true
+
+  '@ply2splat/native-linux-arm64-gnu@0.5.2':
+    optional: true
+
+  '@ply2splat/native-linux-arm64-musl@0.5.2':
+    optional: true
+
+  '@ply2splat/native-linux-x64-gnu@0.5.2':
+    optional: true
+
+  '@ply2splat/native-linux-x64-musl@0.5.2':
+    optional: true
+
+  '@ply2splat/native-win32-arm64-msvc@0.5.2':
+    optional: true
+
+  '@ply2splat/native-win32-ia32-msvc@0.5.2':
+    optional: true
+
+  '@ply2splat/native-win32-x64-msvc@0.5.2':
     optional: true
 
   '@rollup/pluginutils@5.3.0':

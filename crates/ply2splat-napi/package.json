@@ -50,6 +50,7 @@
   "devDependencies": {
     "@ava/typescript": "^6.0.0",
     "@napi-rs/cli": "^3.4.1",
+    "@napi-rs/wasm-tools": "^1.0.1",
     "@oxc-node/core": "^0.0.34",
     "@types/node": "^24.10.1",
     "ava": "^6.4.1",
