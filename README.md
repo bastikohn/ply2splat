@@ -10,6 +10,8 @@ A Rust crate and CLI tool for converting Gaussian Splatting `.ply` files to the 
 
 Available on [crates.io](https://crates.io/crates/ply2splat) for Rust, [PyPI](https://pypi.org/project/ply2splat/) for Python, and [npm](https://www.npmjs.com/package/@ply2splat/native) for JavaScript/TypeScript (Node.js & Web).
 
+**🌐 Try the [Web Converter](https://bastikohn.github.io/ply2splat/)** - Convert files directly in your browser!
+
 ![ply2splat Overview](./assets/overview.jpg)
 
 ## Workspace Architecture
@@ -23,6 +25,8 @@ This repository is organized as a Cargo workspace:
 │   ├── ply2splat-napi/    # Node.js/WASI bindings via NAPI-RS (@ply2splat/native)
 │   ├── ply2splat-python/  # Python bindings via PyO3
 │   └── ply2splat-wasm/    # Low-level WASM bindings (wasm-bindgen)
+└── www/
+    └── ply2splat/         # Web application (React + WASM)
 ```
 
 ## Features
@@ -32,8 +36,21 @@ This repository is organized as a Cargo workspace:
 - **Correctness**: Implements the standard conversion logic including Spherical Harmonics (SH) to color conversion and geometric transformations.
 - **Python Bindings**: Use the library directly from Python via PyO3.
 - **Node.js & Web Support**: High-performance bindings for Node.js (Native) and Web (WASI) via `@ply2splat/native`.
+- **Browser-Based Converter**: Convert files directly in your browser with the [web app](https://bastikohn.github.io/ply2splat/).
 
 ## Installation
+
+### Web App (No Installation Required)
+
+The easiest way to convert files is using the web application:
+
+**🌐 [https://bastikohn.github.io/ply2splat/](https://bastikohn.github.io/ply2splat/)**
+
+Features:
+- Runs entirely in your browser
+- No file upload required - all processing is local
+- Fast WebAssembly-powered conversion
+- Simple drag-and-drop interface
 
 ### Rust Crate
 
