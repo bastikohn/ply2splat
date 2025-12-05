@@ -11,7 +11,9 @@ import "./styles.css";
 import reportWebVitals from "./reportWebVitals.ts";
 
 // Create a new router instance
-// Use the same base path as Vite for GitHub Pages deployment
+// Configure basepath to match Vite's base URL for GitHub Pages deployment:
+// - When BASE_URL is "/" (local dev): basepath is undefined (use default behavior)
+// - When BASE_URL is "/ply2splat/" (GitHub Pages): basepath is "/ply2splat" (trailing slash removed per TanStack Router requirements)
 const basepath =
 	import.meta.env.BASE_URL === "/"
 		? undefined
@@ -20,7 +22,7 @@ const basepath =
 const TanStackQueryProviderContext = TanStackQueryProvider.getContext();
 const router = createRouter({
 	routeTree,
-	basepath,
+	...(basepath !== undefined && { basepath }),
 	context: {
 		...TanStackQueryProviderContext,
 	},
