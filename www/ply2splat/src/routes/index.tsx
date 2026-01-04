@@ -1,9 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useCallback, useRef } from 'react'
-import { Upload, Download, FileType2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useState, useCallback, useRef, lazy, Suspense } from 'react'
+import { Upload, Download, FileType2, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Progress } from '../components/ui/progress'
+
+const SplatPreview = lazy(() => import('../components/SplatPreview').then(m => ({ default: m.SplatPreview })))
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -39,6 +41,7 @@ function App() {
   })
 
   const [isDragging, setIsDragging] = useState(false)
+  const [showPreview, setShowPreview] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const wasmInitialized = useRef(false)
 
@@ -164,6 +167,7 @@ function App() {
       error: null,
       progress: 0,
     })
+    setShowPreview(true)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
@@ -259,6 +263,46 @@ function App() {
                 <CheckCircle2 className="h-6 w-6" />
                 <span className="font-medium">Conversion complete!</span>
               </div>
+
+              {state.splatData && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">3D Preview</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPreview(!showPreview)}
+                      className="h-8"
+                    >
+                      {showPreview ? (
+                        <>
+                          <EyeOff className="h-4 w-4" />
+                          Hide
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-4 w-4" />
+                          Show
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {showPreview && (
+                    <Suspense
+                      fallback={
+                        <div className="w-full h-[400px] rounded-lg bg-muted/50 flex items-center justify-center">
+                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                      }
+                    >
+                      <SplatPreview splatData={state.splatData} />
+                    </Suspense>
+                  )}
+                  <p className="text-xs text-muted-foreground text-center">
+                    Use mouse to rotate • Scroll to zoom
+                  </p>
+                </div>
+              )}
 
               <div className="bg-muted/50 rounded-lg p-4 space-y-2">
                 <div className="flex justify-between text-sm">
