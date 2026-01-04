@@ -21,7 +21,8 @@ function SplatScene({ blobUrl }: { blobUrl: string }) {
 export function SplatPreview({ splatData }: SplatPreviewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const blobUrl = useMemo(() => {
-    // Copy the data to handle SharedArrayBuffer case
+    // Always create a copy of the data - this handles both SharedArrayBuffer case
+    // and ensures we have a clean ArrayBuffer for Blob creation
     const data = new Uint8Array(splatData);
     const blob = new Blob([data], { type: "application/octet-stream" });
     return URL.createObjectURL(blob);

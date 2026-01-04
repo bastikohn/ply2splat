@@ -298,9 +298,11 @@ function App() {
                       <SplatPreview splatData={state.splatData} />
                     </Suspense>
                   )}
-                  <p className="text-xs text-muted-foreground text-center">
-                    Use mouse to rotate • Scroll to zoom
-                  </p>
+                  {showPreview && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Use mouse to rotate • Scroll to zoom
+                    </p>
+                  )}
                 </div>
               )}
 
