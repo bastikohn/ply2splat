@@ -12,9 +12,7 @@
     "check": "biome check"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^1.0.7",
-    "@ply2splat/native": "link:../../crates/ply2splat-napi",
-    "@ply2splat/native-wasm32-wasi": "^0.5.2",
+    "@ply2splat/browser": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
@@ -24,7 +22,6 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
-    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",

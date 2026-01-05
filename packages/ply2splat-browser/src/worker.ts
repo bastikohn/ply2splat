@@ -1,18 +1,34 @@
-// Worker for running ply2splat WASM conversion
+/**
+ * Main conversion worker for ply2splat.
+ * This worker handles WASM initialization and PLY to SPLAT conversion.
+ * @module
+ */
 
 // IMPORTANT: Import polyfill BEFORE @napi-rs/wasm-runtime
-// Imports are evaluated in order, so this ensures Buffer is set globally first.
-import "./worker-polyfill.js";
+import "./polyfill";
 
 import {
   getDefaultContext as __emnapiGetDefaultContext,
   instantiateNapiModule as __emnapiInstantiateNapiModule,
   WASI as __WASI,
+  type ImportObject,
 } from "@napi-rs/wasm-runtime";
 
-let wasmModule = null;
+import type { WorkerRequest, WorkerResponse, ConversionResult } from "./types";
 
-async function initWasm(wasmUrl, wasiWorkerUrl) {
+interface WasmModule {
+  convert(data: Uint8Array, sort: boolean): { data: Uint8Array; count: number };
+  getSplatCount(data: Uint8Array): number;
+  simpleFn(): number;
+}
+
+let wasmModule: WasmModule | null = null;
+
+async function initWasm(
+  wasmUrl: string,
+  wasiWorkerUrl: string,
+  asyncWorkPoolSize: number = 4
+): Promise<void> {
   if (wasmModule) return;
 
   console.log("[ply2splat worker] Initializing WASM...", {
@@ -36,7 +52,7 @@ async function initWasm(wasmUrl, wasiWorkerUrl) {
   const __wasmFile = await fetch(wasmUrl).then((res) => res.arrayBuffer());
   console.log(
     "[ply2splat worker] WASM file fetched, size:",
-    __wasmFile.byteLength,
+    __wasmFile.byteLength
   );
 
   // Convert relative URL to absolute URL for the child worker
@@ -48,19 +64,19 @@ async function initWasm(wasmUrl, wasiWorkerUrl) {
     __wasmFile,
     {
       context: __emnapiContext,
-      asyncWorkPoolSize: 4,
+      asyncWorkPoolSize,
       wasi: __wasi,
       onCreateWorker() {
         console.log(
           "[ply2splat worker] Creating child worker at:",
-          absoluteWorkerUrl,
+          absoluteWorkerUrl
         );
         const worker = new Worker(absoluteWorkerUrl, {
           type: "module",
         });
         return worker;
       },
-      overwriteImports(importObject) {
+      overwriteImports(importObject: ImportObject) {
         importObject.env = {
           ...importObject.env,
           ...importObject.napi,
@@ -69,61 +85,84 @@ async function initWasm(wasmUrl, wasiWorkerUrl) {
         };
         return importObject;
       },
-      beforeInit({ instance }) {
+      beforeInit({ instance }: { instance: WebAssembly.Instance }) {
         for (const name of Object.keys(instance.exports)) {
           if (name.startsWith("__napi_register__")) {
-            instance.exports[name]();
+            (instance.exports[name] as () => void)();
           }
         }
       },
-    },
+    }
   );
 
-  wasmModule = __napiModule.exports;
+  wasmModule = __napiModule.exports as unknown as WasmModule;
   console.log("[ply2splat worker] WASM initialized successfully");
 }
 
-self.onmessage = async (e) => {
+function sendResponse(response: WorkerResponse): void {
+  if (response.type === "convert-complete" && response.result) {
+    // Transfer the buffer back to main thread for better performance
+    self.postMessage(response, [response.result.data.buffer]);
+  } else {
+    self.postMessage(response);
+  }
+}
+
+self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   const { type, id, payload } = e.data;
   console.log("[ply2splat worker] Received message:", type, id);
 
   try {
     if (type === "init") {
-      await initWasm(payload.wasmUrl, payload.wasiWorkerUrl);
+      if (!payload?.wasmUrl || !payload?.wasiWorkerUrl) {
+        throw new Error("wasmUrl and wasiWorkerUrl are required for init");
+      }
+      await initWasm(
+        payload.wasmUrl,
+        payload.wasiWorkerUrl,
+        payload.asyncWorkPoolSize ?? 4
+      );
       console.log("[ply2splat worker] Sending init-complete");
-      self.postMessage({ type: "init-complete", id });
+      sendResponse({ type: "init-complete", id });
     } else if (type === "convert") {
       if (!wasmModule) {
         throw new Error("WASM module not initialized");
       }
-      const resultSimpleFn = wasmModule.simpleFn();
-      console.log("[ply2splat worker] simpleFn result:", resultSimpleFn);
+      if (!payload?.plyData) {
+        throw new Error("plyData is required for convert");
+      }
+
+      const simpleResult = wasmModule.simpleFn();
+      console.log(`Simple result: `, simpleResult);
       console.log(
         "[ply2splat worker] Converting PLY data, size:",
-        payload.plyData.byteLength,
+        payload.plyData.byteLength
       );
+
       const result = wasmModule.convert(payload.plyData, payload.sort ?? true);
+
       console.log(
         "[ply2splat worker] Conversion complete, splats:",
-        result.count,
+        result.count
       );
 
       // Create a copy of the data because the original is in SharedArrayBuffer
       // which cannot be transferred.
       const dataCopy = new Uint8Array(result.data);
 
-      // Transfer the buffer back to main thread
-      self.postMessage(
-        {
-          type: "convert-complete",
-          id,
-          result: { data: dataCopy, count: result.count },
-        },
-        [dataCopy.buffer],
-      );
+      const response: WorkerResponse = {
+        type: "convert-complete",
+        id,
+        result: { data: dataCopy, count: result.count },
+      };
+      sendResponse(response);
     }
   } catch (error) {
     console.error("[ply2splat worker] Error:", error);
-    self.postMessage({ type: "error", id, error: error.message });
+    sendResponse({
+      type: "error",
+      id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
