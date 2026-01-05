@@ -75,3 +75,14 @@ declare module "@napi-rs/wasm-runtime" {
   }
 }
 
+// Let TS accept bundler "URL imports" like `*.wasm?url` / `./worker?worker&url`
+declare module "*?url" {
+  const url: string;
+  export default url;
+}
+
+// (optional) if you still use these anywhere:
+declare module "*?worker&url" {
+  const url: string;
+  export default url;
+}

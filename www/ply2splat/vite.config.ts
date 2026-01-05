@@ -27,49 +27,6 @@ function crossOriginIsolation(): Plugin {
   };
 }
 
-// Plugin to serve splat preview data through HTTP endpoints
-// This avoids blob: URL issues in cross-origin isolated contexts
-function splatPreviewServer(): Plugin {
-  const splatStore = new Map<string, Buffer>();
-
-  return {
-    name: "splat-preview-server",
-    configureServer(server) {
-      // POST endpoint to store splat data
-      server.middlewares.use("/__splat_preview", (req, res, next) => {
-        if (req.method === "POST") {
-          const chunks: Buffer[] = [];
-          req.on("data", (chunk) => chunks.push(chunk));
-          req.on("end", () => {
-            const id = crypto.randomUUID();
-            const data = Buffer.concat(chunks);
-            splatStore.set(id, data);
-            // Auto-cleanup after 5 minutes
-            setTimeout(() => splatStore.delete(id), 5 * 60 * 1000);
-            res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ id }));
-          });
-        } else if (req.method === "GET") {
-          const url = new URL(req.url || "", `http://${req.headers.host}`);
-          const id = url.searchParams.get("id");
-          if (id && splatStore.has(id)) {
-            const data = splatStore.get(id)!;
-            res.setHeader("Content-Type", "application/octet-stream");
-            res.setHeader("Content-Length", data.length.toString());
-            res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
-            res.end(data);
-          } else {
-            res.statusCode = 404;
-            res.end("Not found");
-          }
-        } else {
-          next();
-        }
-      });
-    },
-  };
-}
-
 // https://vitejs.dev/config/
 export default defineConfig({
   // Set base path for GitHub Pages deployment
@@ -78,7 +35,6 @@ export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   plugins: [
     crossOriginIsolation(),
-    splatPreviewServer(),
     devtools(),
     tanstackRouter({
       target: "react",

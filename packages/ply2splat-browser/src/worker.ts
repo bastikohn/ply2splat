@@ -14,7 +14,7 @@ import {
   type ImportObject,
 } from "@napi-rs/wasm-runtime";
 
-import type { WorkerRequest, WorkerResponse, ConversionResult } from "./types";
+import type { WorkerRequest, WorkerResponse } from "./types";
 
 interface WasmModule {
   convert(data: Uint8Array, sort: boolean): { data: Uint8Array; count: number };

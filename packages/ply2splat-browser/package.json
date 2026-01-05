@@ -11,7 +11,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
-    "./ply2splat-native.wasm32-wasi.wasm": "./dist/ply2splat-native.wasm32-wasi.wasm",
     "./worker": {
       "types": "./dist/worker.d.ts",
       "import": "./dist/worker.js"
@@ -21,6 +20,9 @@
       "import": "./dist/wasi-worker.js"
     }
   },
+  "external": [
+    "@ply2splat/browser"
+  ],
   "files": [
     "dist"
   ],
@@ -31,7 +33,6 @@
   "license": "MIT",
   "scripts": {
     "build": "tsup",
-    "postbuild": "node ./scripts/copy-wasm.mjs",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"

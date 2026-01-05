@@ -1,177 +1,162 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useState, useCallback, useRef, lazy, Suspense } from 'react'
-import { Upload, Download, FileType2, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Progress } from '../components/ui/progress'
+import { createFileRoute } from "@tanstack/react-router";
+import { useState, useCallback, useRef, lazy, Suspense } from "react";
+import {
+  Upload,
+  Download,
+  FileType2,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
+import { Button } from "../components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import { Progress } from "../components/ui/progress";
+import { initWasm, convert } from "../lib/ply2splat-client";
+import { useDownloadSplat } from "@/lib/use-download-data";
+import { SplatPreview } from "../components/SplatPreview";
+import { formatFileSize } from "@/lib/size-conversion";
 
-const SplatPreview = lazy(() => import('../components/SplatPreview').then(m => ({ default: m.SplatPreview })))
-
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: App,
-})
+});
 
-type ConversionStatus = 'idle' | 'loading-wasm' | 'converting' | 'success' | 'error'
+type ConversionStatus =
+  | "idle"
+  | "loading-wasm"
+  | "converting"
+  | "success"
+  | "error";
 
 interface ConversionState {
-  status: ConversionStatus
-  fileName: string | null
-  fileSize: number | null
-  splatCount: number | null
-  splatData: Uint8Array | null
-  error: string | null
-  progress: number
+  status: ConversionStatus;
+  fileName: string | null;
+  fileSize: number | null;
+  splatCount: number | null;
+  splatData: Uint8Array | null;
+  error: string | null;
+  progress: number;
 }
 
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
 
 function App() {
   const [state, setState] = useState<ConversionState>({
-    status: 'idle',
+    status: "idle",
     fileName: null,
     fileSize: null,
     splatCount: null,
     splatData: null,
     error: null,
     progress: 0,
-  })
+  });
 
-  const [isDragging, setIsDragging] = useState(false)
-  const [showPreview, setShowPreview] = useState(true)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const wasmInitialized = useRef(false)
+  const [isDragging, setIsDragging] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadWasm = useCallback(async () => {
-    if (wasmInitialized.current) return
+  const convertFile = useCallback(async (file: File) => {
+    setState({
+      status: "loading-wasm",
+      fileName: file.name,
+      fileSize: file.size,
+      splatCount: null,
+      splatData: null,
+      error: null,
+      progress: 5,
+    });
 
-    setState((prev) => ({ ...prev, status: 'loading-wasm', progress: 10 }))
+    try {
+      await initWasm();
+      setState((prev) => ({ ...prev, status: "converting", progress: 30 }));
 
-    // Import our worker-based client
-    const { initWasm } = await import('../lib/ply2splat-client')
-    await initWasm()
+      const arrayBuffer = await file.arrayBuffer();
+      setState((prev) => ({ ...prev, progress: 50 }));
 
-    wasmInitialized.current = true
-  }, [])
+      const plyData = new Uint8Array(arrayBuffer);
+      setState((prev) => ({ ...prev, progress: 70 }));
 
-  const convertFile = useCallback(
-    async (file: File) => {
+      const result = await convert(plyData, false);
+      setState((prev) => ({ ...prev, progress: 90 }));
+
       setState({
-        status: 'loading-wasm',
+        status: "success",
         fileName: file.name,
         fileSize: file.size,
-        splatCount: null,
-        splatData: null,
+        splatCount: result.count,
+        splatData: result.data,
         error: null,
-        progress: 5,
-      })
+        progress: 100,
+      });
+    } catch (err) {
+      setState((prev) => ({
+        ...prev,
+        status: "error",
+        error: err instanceof Error ? err.message : "Unknown error occurred",
+        progress: 0,
+      }));
+    }
+  }, []);
 
-      try {
-        await loadWasm()
-        setState((prev) => ({ ...prev, status: 'converting', progress: 30 }))
-
-        const arrayBuffer = await file.arrayBuffer()
-        setState((prev) => ({ ...prev, progress: 50 }))
-
-        const plyData = new Uint8Array(arrayBuffer)
-        setState((prev) => ({ ...prev, progress: 70 }))
-
-        // Import and use the convert function from worker client
-        const { convert } = await import('../lib/ply2splat-client')
-        const result = await convert(plyData, false)
-        setState((prev) => ({ ...prev, progress: 90 }))
-
-        setState({
-          status: 'success',
-          fileName: file.name,
-          fileSize: file.size,
-          splatCount: result.count,
-          splatData: result.data,
-          error: null,
-          progress: 100,
-        })
-      } catch (err) {
-        setState((prev) => ({
-          ...prev,
-          status: 'error',
-          error: err instanceof Error ? err.message : 'Unknown error occurred',
-          progress: 0,
-        }))
-      }
-    },
-    [loadWasm]
-  )
+  const { downloadSplat } = useDownloadSplat(state.splatData, state.fileName);
 
   const handleFileSelect = useCallback(
     (files: FileList | null) => {
-      if (!files || files.length === 0) return
-      const file = files[0]
-      if (!file.name.toLowerCase().endsWith('.ply')) {
+      if (!files || files.length === 0) return;
+      const file = files[0];
+      if (!file.name.toLowerCase().endsWith(".ply")) {
         setState((prev) => ({
           ...prev,
-          status: 'error',
-          error: 'Please select a PLY file',
-        }))
-        return
+          status: "error",
+          error: "Please select a PLY file",
+        }));
+        return;
       }
-      convertFile(file)
+      convertFile(file);
     },
-    [convertFile]
-  )
+    [convertFile],
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
-      e.preventDefault()
-      setIsDragging(false)
-      handleFileSelect(e.dataTransfer.files)
+      e.preventDefault();
+      setIsDragging(false);
+      handleFileSelect(e.dataTransfer.files);
     },
-    [handleFileSelect]
-  )
+    [handleFileSelect],
+  );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
-
-  const downloadSplat = useCallback(() => {
-    if (!state.splatData || !state.fileName) return
-
-    // Copy the data to a regular ArrayBuffer (handles SharedArrayBuffer case)
-    const data = new Uint8Array(state.splatData)
-    const blob = new Blob([data], { type: 'application/octet-stream' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = state.fileName.replace(/\.ply$/i, '.splat')
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }, [state.splatData, state.fileName])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const reset = useCallback(() => {
     setState({
-      status: 'idle',
+      status: "idle",
       fileName: null,
       fileSize: null,
       splatCount: null,
       splatData: null,
       error: null,
       progress: 0,
-    })
-    setShowPreview(true)
+    });
+    setShowPreview(true);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      fileInputRef.current.value = "";
     }
-  }, [])
+  }, []);
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-12">
@@ -196,7 +181,7 @@ function App() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {state.status === 'idle' || state.status === 'error' ? (
+          {state.status === "idle" || state.status === "error" ? (
             <>
               <div
                 onClick={() => fileInputRef.current?.click()}
@@ -204,8 +189,8 @@ function App() {
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    fileInputRef.current?.click()
+                  if (e.key === "Enter" || e.key === " ") {
+                    fileInputRef.current?.click();
                   }
                 }}
                 role="button"
@@ -214,8 +199,8 @@ function App() {
                   relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
                   transition-colors duration-200
                   ${isDragging
-                    ? 'border-primary bg-primary/5'
-                    : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50'
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
                   }
                 `}
               >
@@ -228,26 +213,32 @@ function App() {
                 />
                 <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">Click to upload</span> or drag and drop
+                  <span className="font-medium text-foreground">
+                    Click to upload
+                  </span>{" "}
+                  or drag and drop
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   PLY files only
                 </p>
               </div>
 
-              {state.status === 'error' && state.error && (
+              {state.status === "error" && state.error && (
                 <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>{state.error}</span>
                 </div>
               )}
             </>
-          ) : state.status === 'loading-wasm' || state.status === 'converting' ? (
+          ) : state.status === "loading-wasm" ||
+            state.status === "converting" ? (
             <div className="py-8 space-y-4">
               <div className="flex items-center justify-center gap-3">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
                 <span className="text-sm font-medium">
-                  {state.status === 'loading-wasm' ? 'Loading converter...' : 'Converting...'}
+                  {state.status === "loading-wasm"
+                    ? "Loading converter..."
+                    : "Converting..."}
                 </span>
               </div>
               <Progress value={state.progress} />
@@ -257,7 +248,7 @@ function App() {
                 </p>
               )}
             </div>
-          ) : state.status === 'success' ? (
+          ) : state.status === "success" ? (
             <div className="py-4 space-y-6">
               <div className="flex items-center justify-center gap-2 text-green-600 dark:text-green-500">
                 <CheckCircle2 className="h-6 w-6" />
@@ -288,20 +279,20 @@ function App() {
                     </Button>
                   </div>
                   {showPreview && (
-                    <Suspense
-                      fallback={
-                        <div className="w-full h-[400px] rounded-lg bg-muted/50 flex items-center justify-center">
-                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        </div>
-                      }
-                    >
-                      <SplatPreview splatData={state.splatData} />
-                    </Suspense>
-                  )}
-                  {showPreview && (
-                    <p className="text-xs text-muted-foreground text-center">
-                      Use mouse to rotate • Scroll to zoom
-                    </p>
+                    <>
+                      <Suspense
+                        fallback={
+                          <div className="w-full h-[400px] rounded-lg bg-muted/50 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                          </div>
+                        }
+                      >
+                        <SplatPreview splatData={state.splatData} />
+                      </Suspense>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Use mouse to rotate • Scroll to zoom
+                      </p>
+                    </>
                   )}
                 </div>
               )}
@@ -313,15 +304,23 @@ function App() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Input size:</span>
-                  <span className="font-medium">{state.fileSize ? formatFileSize(state.fileSize) : '-'}</span>
+                  <span className="font-medium">
+                    {state.fileSize ? formatFileSize(state.fileSize) : "-"}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Splats:</span>
-                  <span className="font-medium">{state.splatCount?.toLocaleString()}</span>
+                  <span className="font-medium">
+                    {state.splatCount?.toLocaleString()}
+                  </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Output size:</span>
-                  <span className="font-medium">{state.splatData ? formatFileSize(state.splatData.length) : '-'}</span>
+                  <span className="font-medium">
+                    {state.splatData
+                      ? formatFileSize(state.splatData.length)
+                      : "-"}
+                  </span>
                 </div>
               </div>
 
@@ -342,8 +341,18 @@ function App() {
       <div className="mt-16 grid gap-8 md:grid-cols-3 text-center">
         <div>
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 mb-4">
-            <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
           </div>
           <h3 className="font-semibold mb-2">Fast Conversion</h3>
@@ -353,8 +362,18 @@ function App() {
         </div>
         <div>
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 mb-4">
-            <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
             </svg>
           </div>
           <h3 className="font-semibold mb-2">100% Private</h3>
@@ -364,8 +383,18 @@ function App() {
         </div>
         <div>
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 mb-4">
-            <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+            <svg
+              className="h-6 w-6 text-primary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+              />
             </svg>
           </div>
           <h3 className="font-semibold mb-2">Smaller Files</h3>
@@ -375,5 +404,5 @@ function App() {
         </div>
       </div>
     </div>
-  )
+  );
 }

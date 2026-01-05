@@ -22,11 +22,7 @@
  * @module
  */
 
-export type {
-  ConversionResult,
-  InitOptions,
-  ConvertOptions,
-} from "./types";
+export type { ConversionResult, InitOptions, ConvertOptions } from "./types";
 
 import type {
   ConversionResult,
@@ -35,18 +31,18 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from "./types";
+import wasmUrl from "@ply2splat/native-wasm32-wasi/ply2splat-native.wasm32-wasi.wasm?url";
 
-let worker: Worker | null = null;
-let messageId = 0;
-const pendingMessages = new Map<
-  number,
-  { resolve: (value: unknown) => void; reject: (error: Error) => void }
->();
+const defaultMainWorkerUrl = new URL("./worker.js", import.meta.url).toString();
+const defaultWasiWorkerUrl = new URL(
+  "./wasi-worker.js",
+  import.meta.url
+).toString();
 
 // Asset URLs - these need to be set before initialization
-let configuredWasmUrl: string | null = null;
-let configuredWasiWorkerUrl: string | null = null;
-let configuredMainWorkerUrl: string | null = null;
+let configuredWasmUrl: string = wasmUrl;
+let configuredMainWorkerUrl: string = defaultMainWorkerUrl;
+let configuredWasiWorkerUrl: string = defaultWasiWorkerUrl;
 let configuredAsyncWorkPoolSize = 4;
 
 /**
@@ -88,160 +84,6 @@ export function configure(options: {
   }
 }
 
-function getWorker(): Worker {
-  if (!worker) {
-    if (!configuredMainWorkerUrl) {
-      throw new Error(
-        "Main worker URL not configured. Call configure({ mainWorkerUrl }) first, " +
-          "or use createClient() with the URLs."
-      );
-    }
-
-    console.log("[ply2splat] Creating worker...");
-    worker = new Worker(configuredMainWorkerUrl, { type: "module" });
-
-    worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      const { type, id, result, error } = e.data;
-      console.log("[ply2splat] Worker message received:", type, id);
-
-      const pending = pendingMessages.get(id);
-      if (pending) {
-        pendingMessages.delete(id);
-        if (type === "error") {
-          pending.reject(new Error(error ?? "Unknown worker error"));
-        } else {
-          pending.resolve(result);
-        }
-      } else {
-        console.warn("[ply2splat] No pending message for id:", id);
-      }
-    };
-
-    worker.onerror = (e) => {
-      console.error("[ply2splat] Worker error:", e);
-    };
-  }
-  return worker;
-}
-
-function postMessage<T>(
-  type: WorkerRequest["type"],
-  payload?: WorkerRequest["payload"]
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const id = messageId++;
-    console.log("[ply2splat] Posting message:", type, id);
-    pendingMessages.set(id, {
-      resolve: resolve as (value: unknown) => void,
-      reject,
-    });
-    getWorker().postMessage({ type, id, payload } as WorkerRequest);
-  });
-}
-
-let initialized = false;
-
-/**
- * Initialize the WASM module.
- *
- * This function is optional - calling convert() will automatically
- * initialize the WASM module if needed.
- *
- * @param options - Optional initialization options
- *
- * @example
- * ```typescript
- * await initWasm();
- * // or with options:
- * await initWasm({ asyncWorkPoolSize: 8 });
- * ```
- */
-export async function initWasm(options?: InitOptions): Promise<void> {
-  if (initialized) return;
-
-  const wasmUrl = options?.wasmUrl ?? configuredWasmUrl;
-  const wasiWorkerUrl = options?.wasiWorkerUrl ?? configuredWasiWorkerUrl;
-  const asyncWorkPoolSize =
-    options?.asyncWorkPoolSize ?? configuredAsyncWorkPoolSize;
-
-  if (!wasmUrl) {
-    throw new Error(
-      "WASM URL not configured. Call configure({ wasmUrl }) first, " +
-        "or pass { wasmUrl } to initWasm()."
-    );
-  }
-  if (!wasiWorkerUrl) {
-    throw new Error(
-      "WASI worker URL not configured. Call configure({ wasiWorkerUrl }) first, " +
-        "or pass { wasiWorkerUrl } to initWasm()."
-    );
-  }
-
-  console.log("[ply2splat] Initializing WASM...");
-  await postMessage("init", { wasmUrl, wasiWorkerUrl, asyncWorkPoolSize });
-  initialized = true;
-  console.log("[ply2splat] WASM initialized");
-}
-
-/**
- * Convert PLY data to SPLAT format.
- *
- * The WASM module will be automatically initialized if not already done.
- *
- * @param plyData - PLY file contents as a Uint8Array
- * @param options - Optional conversion options
- * @returns Promise resolving to the conversion result
- *
- * @example
- * ```typescript
- * const file = document.querySelector('input[type="file"]').files[0];
- * const plyData = new Uint8Array(await file.arrayBuffer());
- * const result = await convert(plyData, { sort: true });
- *
- * console.log(`Converted ${result.count} splats`);
- * console.log(`Output size: ${result.data.byteLength} bytes`);
- * ```
- */
-export async function convert(
-  plyData: Uint8Array,
-  options?: ConvertOptions
-): Promise<ConversionResult> {
-  await initWasm();
-  console.log("[ply2splat] Converting PLY data...");
-  return postMessage<ConversionResult>("convert", {
-    plyData,
-    sort: options?.sort ?? true,
-  });
-}
-
-/**
- * Terminate the worker and clean up resources.
- *
- * Call this when you're done with conversions to free resources.
- * You can call initWasm() or convert() again after termination
- * to restart the worker.
- */
-export function terminate(): void {
-  if (worker) {
-    worker.terminate();
-    worker = null;
-    initialized = false;
-    pendingMessages.clear();
-    console.log("[ply2splat] Worker terminated");
-  }
-}
-
-/**
- * Check if the WASM module is initialized.
- */
-export function isInitialized(): boolean {
-  return initialized;
-}
-
-// ============================================================================
-// Factory API - Alternative to module-level state
-// ============================================================================
-
 /**
  * Ply2Splat client instance created by createClient().
  */
@@ -249,7 +91,10 @@ export interface Ply2SplatClient {
   /** Initialize the WASM module */
   initWasm(options?: InitOptions): Promise<void>;
   /** Convert PLY data to SPLAT format */
-  convert(plyData: Uint8Array, options?: ConvertOptions): Promise<ConversionResult>;
+  convert(
+    plyData: Uint8Array,
+    options?: ConvertOptions
+  ): Promise<ConversionResult>;
   /** Terminate the worker and clean up resources */
   terminate(): void;
   /** Check if the WASM module is initialized */
@@ -280,12 +125,19 @@ export interface Ply2SplatClient {
  * client.terminate();
  * ```
  */
-export function createClient(config: {
-  wasmUrl: string;
-  mainWorkerUrl: string;
-  wasiWorkerUrl: string;
-  asyncWorkPoolSize?: number;
-}): Ply2SplatClient {
+export function createClient(
+  config: {
+    wasmUrl?: string;
+    mainWorkerUrl?: string;
+    wasiWorkerUrl?: string;
+    asyncWorkPoolSize?: number;
+  } = {}
+): Ply2SplatClient {
+  const wasmUrl = config.wasmUrl ?? configuredWasmUrl;
+  const mainWorkerUrl = config.mainWorkerUrl ?? configuredMainWorkerUrl;
+  const wasiWorkerUrl = config.wasiWorkerUrl ?? configuredWasiWorkerUrl;
+  const asyncWorkPoolSize =
+    config.asyncWorkPoolSize ?? configuredAsyncWorkPoolSize;
   let clientWorker: Worker | null = null;
   let clientMessageId = 0;
   let clientInitialized = false;
@@ -297,7 +149,7 @@ export function createClient(config: {
   function getClientWorker(): Worker {
     if (!clientWorker) {
       console.log("[ply2splat client] Creating worker...");
-      clientWorker = new Worker(config.mainWorkerUrl, { type: "module" });
+      clientWorker = new Worker(mainWorkerUrl, { type: "module" });
 
       clientWorker.onmessage = (e: MessageEvent<WorkerResponse>) => {
         const { type, id, result, error } = e.data;
@@ -340,16 +192,11 @@ export function createClient(config: {
     async initWasm(options?: InitOptions): Promise<void> {
       if (clientInitialized) return;
 
-      const wasmUrl = options?.wasmUrl ?? config.wasmUrl;
-      const wasiWorkerUrl = options?.wasiWorkerUrl ?? config.wasiWorkerUrl;
-      const asyncWorkPoolSize =
-        options?.asyncWorkPoolSize ?? config.asyncWorkPoolSize ?? 4;
-
       console.log("[ply2splat client] Initializing WASM...");
       await clientPostMessage("init", {
-        wasmUrl,
-        wasiWorkerUrl,
-        asyncWorkPoolSize,
+        wasmUrl: options?.wasmUrl ?? wasmUrl,
+        wasiWorkerUrl: options?.wasiWorkerUrl ?? wasiWorkerUrl,
+        asyncWorkPoolSize: options?.asyncWorkPoolSize ?? asyncWorkPoolSize,
       });
       clientInitialized = true;
       console.log("[ply2splat client] WASM initialized");
@@ -384,4 +231,3 @@ export function createClient(config: {
     },
   };
 }
-
