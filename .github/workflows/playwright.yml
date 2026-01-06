@@ -1,0 +1,86 @@
+name: Playwright Tests
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "www/ply2splat/**"
+      - "packages/ply2splat-browser/**"
+      - "crates/ply2splat-napi/**"
+      - ".github/workflows/playwright.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "www/ply2splat/**"
+      - "packages/ply2splat-browser/**"
+      - "crates/ply2splat-napi/**"
+      - ".github/workflows/playwright.yml"
+
+jobs:
+  test:
+    timeout-minutes: 30
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Chrome on multiple OS
+          - os: ubuntu-latest
+            browser: chromium
+          - os: macos-latest
+            browser: chromium
+          - os: windows-latest
+            browser: chromium
+          # Firefox on Ubuntu
+          - os: ubuntu-latest
+            browser: firefox
+          # WebKit on macOS (Safari)
+          - os: macos-latest
+            browser: webkit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: www/ply2splat/package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1-threads
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the WASM native package
+        run: pnpm --filter @ply2splat/native build:release --target wasm32-wasip1-threads
+
+      - name: Build browser package
+        run: pnpm --filter @ply2splat/browser build
+
+      - name: Install Playwright Browsers
+        working-directory: www/ply2splat
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Run Playwright tests
+        working-directory: www/ply2splat
+        run: npx playwright test --project=${{ matrix.browser }}
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ matrix.os }}-${{ matrix.browser }}
+          path: www/ply2splat/playwright-report/
+          retention-days: 30
