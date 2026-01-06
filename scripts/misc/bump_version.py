@@ -102,6 +102,30 @@ def bump_pyproject(new_version):
     print(f"Updated {path}")
 
 
+def bump_readme(new_version):
+    path = 'README.md'
+    if not os.path.exists(path):
+        print(f"Skipping {path} (not found)")
+        return
+
+    with open(path, 'r') as f:
+        content = f.read()
+
+    # Extract major.minor version for Cargo.toml dependency example
+    major_minor = '.'.join(new_version.split('.')[:2])
+
+    # Update the Cargo.toml example: ply2splat = "X.Y"
+    new_content = re.sub(
+        r'(ply2splat\s*=\s*")([^"]+)(")',
+        r'\g<1>' + major_minor + r'\g<3>',
+        content
+    )
+
+    with open(path, 'w') as f:
+        f.write(new_content)
+    print(f"Updated {path}")
+
+
 def regenerate_lock_files():
     """Regenerate lock files to sync with updated manifests.
 
@@ -199,6 +223,7 @@ if __name__ == "__main__":
         'pnpm-lock.yaml',
         'pyproject.toml',
         'uv.lock',
+        'README.md',
     ]
 
     try:
@@ -206,6 +231,7 @@ if __name__ == "__main__":
         bump_napi_package(new_version)
         bump_browser_package(new_version)
         bump_pyproject(new_version)
+        bump_readme(new_version)
         print(f"Successfully updated manifest files to {new_version}")
 
         if not regenerate_lock_files():
