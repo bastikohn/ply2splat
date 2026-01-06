@@ -16,6 +16,10 @@ on:
       - "crates/ply2splat-napi/**"
       - ".github/workflows/playwright.yml"
 
+# Set explicit permissions for security
+permissions:
+  contents: read
+
 jobs:
   test:
     timeout-minutes: 30
@@ -58,6 +62,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+          # wasm32-wasip1-threads target provides WebAssembly System Interface (WASI) with threads support,
+          # which is required for the browser-based WASM conversion using SharedArrayBuffer
           targets: wasm32-wasip1-threads
 
       - name: Install workspace dependencies

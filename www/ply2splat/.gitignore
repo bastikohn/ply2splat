@@ -9,3 +9,8 @@ count.txt
 .tanstack
 .wrangler
 .pnpm-store/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/

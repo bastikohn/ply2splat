@@ -47,8 +47,9 @@ test.describe("PLY to SPLAT Converter", () => {
 		await expect(page.getByText("Output size:")).toBeVisible();
 
 		// Verify splat count is shown (should be 100 for our test file)
-		// Use exact match to avoid matching "100% Private"
-		await expect(page.getByText("100", { exact: true })).toBeVisible();
+		// Locate the "Splats:" row and verify it contains "100"
+		const splatsRow = page.locator("div").filter({ hasText: /^Splats:/ });
+		await expect(splatsRow.getByText("100")).toBeVisible();
 	});
 
 	test("should show 3D preview after conversion", async ({ page }) => {
