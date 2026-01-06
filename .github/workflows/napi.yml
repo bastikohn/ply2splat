@@ -409,7 +409,7 @@ jobs:
       - name: List packages
         run: ls -R ./npm
         shell: bash
-      - name: Publish
+      - name: Publish native package
         run: |
           npm config set provenance true
           if git log -1 --pretty=%B | grep "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$";
@@ -425,4 +425,37 @@ jobs:
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # Build and publish @ply2splat/browser package
+      - name: Update browser package dependency version
+        working-directory: packages/ply2splat-browser
+        run: |
+          # Update the local path dependency to use the published npm version
+          VERSION=$(node -p "require('../../crates/ply2splat-napi/package.json').version")
+          echo "Setting @ply2splat/native-wasm32-wasi version to $VERSION"
+          npm pkg set dependencies.@ply2splat/native-wasm32-wasi="$VERSION"
+
+      - name: Install browser package dependencies
+        working-directory: packages/ply2splat-browser
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build browser package
+        working-directory: packages/ply2splat-browser
+        run: pnpm build
+
+      - name: Publish browser package
+        working-directory: packages/ply2splat-browser
+        run: |
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
+          if git log -1 --pretty=%B | grep "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+$";
+          then
+            npm publish --access public
+          elif git log -1 --pretty=%B | grep "^v\?[0-9]\+\.[0-9]\+\.[0-9]\+";
+          then
+            npm publish --tag next --access public
+          else
+            echo "Not a release, skipping publish"
+          fi
+        env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

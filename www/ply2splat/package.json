@@ -12,10 +12,10 @@
     "check": "biome check"
   },
   "dependencies": {
-    "@napi-rs/wasm-runtime": "^1.0.7",
-    "@ply2splat/native": "link:../../crates/ply2splat-napi",
-    "@ply2splat/native-wasm32-wasi": "^0.5.2",
+    "@ply2splat/browser": "workspace:*",
     "@radix-ui/react-slot": "^1.2.4",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
     "@t3-oss/env-core": "^0.13.8",
     "@tailwindcss/vite": "^4.0.6",
     "@tanstack/react-devtools": "^0.7.0",
@@ -24,7 +24,6 @@
     "@tanstack/react-router": "^1.132.0",
     "@tanstack/react-router-devtools": "^1.132.0",
     "@tanstack/router-plugin": "^1.132.0",
-    "buffer": "^6.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
@@ -32,6 +31,7 @@
     "react-dom": "^19.2.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss": "^4.0.6",
+    "three": "^0.182.0",
     "tw-animate-css": "^1.3.6",
     "zod": "^4.1.11"
   },
@@ -43,6 +43,7 @@
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/three": "^0.182.0",
     "@vitejs/plugin-react": "^5.0.4",
     "babel-plugin-react-compiler": "^1.0.0",
     "jsdom": "^27.0.0",

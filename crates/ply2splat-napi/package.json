@@ -14,8 +14,7 @@
   },
   "files": [
     "index.d.ts",
-    "index.js",
-    "browser.js"
+    "index.js"
   ],
   "scripts": {
     "build": "pnpm run build:debug",

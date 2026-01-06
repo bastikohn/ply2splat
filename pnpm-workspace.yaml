@@ -1,0 +1,5 @@
+packages:
+  - "packages/*"
+  - "www/*"
+  - "crates/ply2splat-napi"
+

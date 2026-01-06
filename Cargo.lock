@@ -1348,16 +1348,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ply2splat-wasm"
-version = "0.5.2"
-dependencies = [
- "bytemuck",
- "js-sys",
- "ply2splat",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "portable-atomic"
 version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

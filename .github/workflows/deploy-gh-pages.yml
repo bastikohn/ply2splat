@@ -5,6 +5,8 @@ on:
     branches: ["main"]
     paths:
       - "www/ply2splat/**"
+      - "packages/ply2splat-browser/**"
+      - "crates/ply2splat-napi/**"
       - ".github/workflows/deploy-gh-pages.yml"
   workflow_dispatch:
 
@@ -23,9 +25,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: www/ply2splat
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,19 +39,22 @@ jobs:
         with:
           node-version: "22"
           cache: "pnpm"
-          cache-dependency-path: www/ply2splat/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Install dependencies
+      - name: Install workspace dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
+      - name: Build browser package
+        run: pnpm --filter @ply2splat/browser build
+
+      - name: Build demo site
         env:
           # Set base path for GitHub Pages (repository name)
           VITE_BASE_PATH: /ply2splat/
-        run: pnpm build
+        run: pnpm --filter ply2splat build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
