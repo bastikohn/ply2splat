@@ -11,7 +11,7 @@ export function Flex({
 >) {
 	return (
 		<div
-			className={cn("flex", direction == "col" && "flex-col", className)}
+			className={cn("flex", direction === "col" && "flex-col", className)}
 			{...props}
 		>
 			{children}

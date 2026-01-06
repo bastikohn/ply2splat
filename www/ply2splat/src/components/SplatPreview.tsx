@@ -13,7 +13,7 @@ function SplatScene({ splatUrl }: { splatUrl: string }) {
 			<CameraControls infinityDolly minDistance={0.1} />
 			<Suspense fallback={null}>
 				<Splat src={splatUrl} />
-			</Suspense >
+			</Suspense>
 		</>
 	);
 }
@@ -24,25 +24,31 @@ export function SplatPreview({ splatData }: SplatPreviewProps) {
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		// Upload splat data to the preview server endpoint
-		// This avoids blob: URL issues in cross-origin isolated contexts
-		const uploadSplatData = async () => {
-			try {
-				setIsLoading(true);
-				setError(null);
+		setIsLoading(true);
+		setError(null);
 
-				const data = new Uint8Array(splatData);
-				const blob = new Blob([data]);
-				const url = URL.createObjectURL(blob);
-				setSplatUrl(url);
-			} catch (err) {
-				console.error("Failed to prepare splat preview:", err);
-				setError(err instanceof Error ? err.message : "Failed to load preview");
-				setIsLoading(false);
+		let url: string | null = null;
+		try {
+			// Create a copy to ensure proper ArrayBuffer type for Blob constructor
+			const blob = new Blob([splatData.slice()], {
+				type: "application/octet-stream",
+			});
+			url = URL.createObjectURL(blob);
+			console.log("Created URL:", url);
+			setSplatUrl(url);
+		} catch (err) {
+			console.error("Failed to create blob URL:", err);
+			setError(err instanceof Error ? err.message : "Failed to load preview");
+			setSplatUrl(null);
+		}
+
+		// Cleanup blob URL when component unmounts or splatData changes
+		return () => {
+			if (url) {
+				console.log("Revoking url", url);
+				URL.revokeObjectURL(url);
 			}
 		};
-
-		uploadSplatData();
 	}, [splatData]);
 
 	if (error) {
@@ -62,6 +68,7 @@ export function SplatPreview({ splatData }: SplatPreviewProps) {
 			)}
 			{splatUrl && (
 				<Canvas
+					camera={{ near: 0.001, fov: 30 }}
 					onCreated={() => setIsLoading(false)}
 				>
 					<SplatScene splatUrl={splatUrl} />
