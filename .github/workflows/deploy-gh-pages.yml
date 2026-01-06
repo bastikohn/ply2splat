@@ -41,6 +41,12 @@ jobs:
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
+      - name: Install
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-wasip1-threads
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
@@ -48,7 +54,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build the WASM native package
-        run: pnpm --filter @ply2splat/native build --target wasm32-wasip1-threads --release
+        run: pnpm --filter @ply2splat/native build:release --target wasm32-wasip1-threads
 
       - name: Build browser package
         run: pnpm --filter @ply2splat/browser build
