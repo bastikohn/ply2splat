@@ -58,7 +58,7 @@ Add `ply2splat` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ply2splat = "0.5"
+ply2splat = "0.6"
 ```
 
 ### CLI
