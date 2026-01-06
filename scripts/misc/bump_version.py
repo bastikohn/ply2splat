@@ -4,6 +4,7 @@ import re
 import os
 import subprocess
 
+
 def bump_cargo_toml(new_version):
     path = 'Cargo.toml'
     if not os.path.exists(path):
@@ -12,7 +13,7 @@ def bump_cargo_toml(new_version):
 
     with open(path, 'r') as f:
         content = f.read()
-    
+
     # Update workspace version
     # Matches [workspace.package] followed by version = "..."
     new_content = re.sub(
@@ -21,10 +22,11 @@ def bump_cargo_toml(new_version):
         content,
         count=1
     )
-    
+
     with open(path, 'w') as f:
         f.write(new_content)
     print(f"Updated {path}")
+
 
 def bump_napi_package(new_version):
     path = 'crates/ply2splat-napi/package.json'
@@ -34,15 +36,15 @@ def bump_napi_package(new_version):
 
     with open(path, 'r') as f:
         content = f.read()
-    
+
     # Update package version (assume it's the first "version": "..." key)
     content = re.sub(
         r'("version":\s*")([^"]+)(")',
         r'\g<1>' + new_version + r'\g<3>',
         content,
-        count=1 
+        count=1
     )
-    
+
     # Update optionalDependencies for @ply2splat/native-* packages
     # matches "@ply2splat/native-something": "0.4.4"
     content = re.sub(
@@ -55,6 +57,29 @@ def bump_napi_package(new_version):
         f.write(content)
     print(f"Updated {path}")
 
+
+def bump_browser_package(new_version):
+    path = 'packages/ply2splat-browser/package.json'
+    if not os.path.exists(path):
+        print(f"Skipping {path} (not found)")
+        return
+
+    with open(path, 'r') as f:
+        content = f.read()
+
+    # Update package version (assume it's the first "version": "..." key)
+    content = re.sub(
+        r'("version":\s*")([^"]+)(")',
+        r'\g<1>' + new_version + r'\g<3>',
+        content,
+        count=1
+    )
+
+    with open(path, 'w') as f:
+        f.write(content)
+    print(f"Updated {path}")
+
+
 def bump_pyproject(new_version):
     path = 'pyproject.toml'
     if not os.path.exists(path):
@@ -63,7 +88,7 @@ def bump_pyproject(new_version):
 
     with open(path, 'r') as f:
         content = f.read()
-        
+
     # Update project version
     new_content = re.sub(
         r'(version\s*=\s*")([^"]+)(")',
@@ -71,40 +96,42 @@ def bump_pyproject(new_version):
         content,
         count=1
     )
-    
+
     with open(path, 'w') as f:
         f.write(new_content)
     print(f"Updated {path}")
 
+
 def regenerate_lock_files():
     """Regenerate lock files to sync with updated manifests.
-    
+
     Returns:
         True if all lock files were regenerated successfully, False otherwise.
     """
     success = True
-    
+
     # Cargo.lock - run cargo check to update (includes fuzz crate as part of workspace)
     if os.path.exists('Cargo.toml'):
         print("Regenerating Cargo.lock...")
-        result = subprocess.run(["cargo", "check", "--workspace"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["cargo", "check", "--workspace"], capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error: cargo check failed: {result.stderr}")
             success = False
         else:
             print("Updated Cargo.lock")
-    
-    # pnpm-lock.yaml - run pnpm install
-    napi_dir = 'crates/ply2splat-napi'
-    if os.path.exists(os.path.join(napi_dir, 'package.json')):
+
+    # pnpm-lock.yaml - run pnpm install at root (workspace mode)
+    if os.path.exists('pnpm-workspace.yaml'):
         print("Regenerating pnpm-lock.yaml...")
-        result = subprocess.run(["pnpm", "install", "--lockfile-only"], cwd=napi_dir, capture_output=True, text=True)
+        result = subprocess.run(
+            ["pnpm", "install", "--lockfile-only"], capture_output=True, text=True)
         if result.returncode != 0:
             print(f"Error: pnpm install failed: {result.stderr}")
             success = False
         else:
             print("Updated pnpm-lock.yaml")
-    
+
     # uv.lock - run uv lock
     if os.path.exists('pyproject.toml'):
         print("Regenerating uv.lock...")
@@ -114,29 +141,31 @@ def regenerate_lock_files():
             success = False
         else:
             print("Updated uv.lock")
-    
+
     return success
+
 
 def run_git_commands(version, files):
     try:
         # Stage specific changes
         subprocess.run(["git", "add"] + files, check=True)
-        
+
         # Check for staged changes
         # git diff --cached --quiet returns 1 if there are differences (changes), 0 if clean
         result = subprocess.run(["git", "diff", "--cached", "--quiet"])
-        
-        if result.returncode == 1: # Changes detected
+
+        if result.returncode == 1:  # Changes detected
             commit_msg = f"v{version}"
             subprocess.run(["git", "commit", "-m", commit_msg], check=True)
             print(f"Committed changes: {commit_msg}")
         else:
             print("Nothing to commit (files might remain unchanged).")
-        
+
         # Tag
         tag_name = f"v{version}"
         # Check if tag exists
-        tag_check = subprocess.run(["git", "tag", "-l", tag_name], capture_output=True, text=True)
+        tag_check = subprocess.run(
+            ["git", "tag", "-l", tag_name], capture_output=True, text=True)
         if tag_name not in tag_check.stdout:
             subprocess.run(["git", "tag", tag_name], check=True)
             print(f"Created tag: {tag_name}")
@@ -147,25 +176,27 @@ def run_git_commands(version, files):
         print(f"Git command failed: {e}")
         sys.exit(1)
 
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print(f"Usage: {sys.argv[0]} <new_version>")
         sys.exit(1)
-    
+
     new_version = sys.argv[1]
-    
+
     # Simple validation for X.Y.Z
     if not re.match(r'^\d+\.\d+\.\d+$', new_version):
         print("Error: Version must be in format X.Y.Z")
         sys.exit(1)
 
     print(f"Bumping version to {new_version}...")
-    
+
     files_to_update = [
         'Cargo.toml',
         'Cargo.lock',
         'crates/ply2splat-napi/package.json',
-        'crates/ply2splat-napi/pnpm-lock.yaml',
+        'packages/ply2splat-browser/package.json',
+        'pnpm-lock.yaml',
         'pyproject.toml',
         'uv.lock',
     ]
@@ -173,14 +204,15 @@ if __name__ == "__main__":
     try:
         bump_cargo_toml(new_version)
         bump_napi_package(new_version)
+        bump_browser_package(new_version)
         bump_pyproject(new_version)
         print(f"Successfully updated manifest files to {new_version}")
-        
+
         if not regenerate_lock_files():
             print("Error: Failed to regenerate one or more lock files. Aborting.")
             sys.exit(1)
         print(f"Successfully regenerated lock files")
-        
+
         run_git_commands(new_version, files_to_update)
 
         # Ask to push
@@ -193,8 +225,9 @@ if __name__ == "__main__":
             subprocess.run(["git", "push", "origin", tag_name], check=True)
             print("Done.")
         else:
-            print(f"Skipping push. Remember to run: git push && git push origin v{new_version}")
-        
+            print(
+                f"Skipping push. Remember to run: git push && git push origin v{new_version}")
+
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
