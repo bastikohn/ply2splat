@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const testPlyFile = path.join(__dirname, "fixtures", "test.ply");
+const truckPlyFile = path.join(__dirname, "fixtures", "truck.ply");
 
 // Increase timeout for WASM-based tests
 test.setTimeout(60000);
@@ -152,5 +153,84 @@ test.describe("PLY to SPLAT Converter", () => {
 		// Verify we're back to the upload state
 		await expect(page.getByText("Click to upload")).toBeVisible();
 		await expect(page.getByText("Conversion complete!")).not.toBeVisible();
+	});
+});
+
+// Separate test suite for real-world large PLY files
+test.describe("Real-world PLY file conversion", () => {
+	// Extended timeout for large file processing (486MB truck.ply with 2M+ vertices)
+	test.setTimeout(300000);
+
+	test("should convert truck.ply (real-world Gaussian Splatting file)", async ({
+		page,
+	}) => {
+		await page.goto("/");
+
+		// Upload the real-world truck PLY file
+		const fileInput = page.locator('input[type="file"]');
+		await fileInput.setInputFiles(truckPlyFile);
+
+		// Wait for conversion to complete (extended timeout for large file)
+		await expect(page.getByText("Conversion complete!")).toBeVisible({
+			timeout: 300000,
+		});
+
+		// Verify conversion stats are displayed
+		await expect(page.getByText("Input file:")).toBeVisible();
+		await expect(page.getByText("truck.ply")).toBeVisible();
+		await expect(page.getByText("Input size:")).toBeVisible();
+		await expect(page.getByText("Splats:")).toBeVisible();
+		await expect(page.getByText("Output size:")).toBeVisible();
+
+		// Verify splat count is shown (should be 2,056,645 for the truck file)
+		const splatsRow = page.locator("div").filter({ hasText: /^Splats:/ });
+		await expect(splatsRow.getByText("2,056,645")).toBeVisible();
+	});
+
+	test("should show 3D preview for truck.ply", async ({ page }) => {
+		await page.goto("/");
+
+		// Upload the real-world truck PLY file
+		const fileInput = page.locator('input[type="file"]');
+		await fileInput.setInputFiles(truckPlyFile);
+
+		// Wait for conversion to complete
+		await expect(page.getByText("Conversion complete!")).toBeVisible({
+			timeout: 300000,
+		});
+
+		// Check that 3D Preview section is visible
+		await expect(page.getByText("3D Preview")).toBeVisible();
+
+		// Check that the canvas element exists (WebGL preview)
+		const canvas = page.locator("canvas");
+		await expect(canvas).toBeVisible({ timeout: 30000 });
+	});
+
+	test("should download converted truck.splat file", async ({ page }) => {
+		await page.goto("/");
+
+		// Upload the real-world truck PLY file
+		const fileInput = page.locator('input[type="file"]');
+		await fileInput.setInputFiles(truckPlyFile);
+
+		// Wait for conversion to complete
+		await expect(page.getByText("Conversion complete!")).toBeVisible({
+			timeout: 300000,
+		});
+
+		// Set up download listener
+		const downloadPromise = page.waitForEvent("download");
+
+		// Click download button
+		await page.getByRole("button", { name: "Download SPLAT" }).click();
+
+		// Verify download is triggered
+		const download = await downloadPromise;
+		expect(download.suggestedFilename()).toBeTruthy();
+
+		// Verify file path exists
+		const downloadPath = await download.path();
+		expect(downloadPath).toBeTruthy();
 	});
 });

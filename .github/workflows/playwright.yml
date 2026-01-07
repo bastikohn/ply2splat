@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   test:
-    timeout-minutes: 30
+    timeout-minutes: 60
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -74,6 +74,11 @@ jobs:
 
       - name: Build browser package
         run: pnpm --filter @ply2splat/browser build
+
+      - name: Download real-world test fixture (truck.ply)
+        working-directory: www/ply2splat
+        run: |
+          curl -L -o e2e/fixtures/truck.ply "https://huggingface.co/datasets/Voxel51/gaussian_splatting/resolve/main/FO_dataset/truck/point_cloud/iteration_30000/point_cloud.ply"
 
       - name: Install Playwright Browsers
         working-directory: www/ply2splat
