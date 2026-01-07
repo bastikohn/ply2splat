@@ -9,3 +9,11 @@ count.txt
 .tanstack
 .wrangler
 .pnpm-store/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Large test fixtures (downloaded during CI)
+e2e/fixtures/truck.ply
