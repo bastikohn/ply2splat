@@ -12,7 +12,9 @@
 //! - **Sorting**: Automatically sorts splats by importance (volume * opacity) and spatial position
 //!   for deterministic rendering order.
 
-use anyhow::{Context, Result};
+pub mod error;
+pub use error::{PlyError, PlyResult};
+
 use bytemuck::{Pod, Zeroable};
 use ply_rs::parser::Parser;
 use ply_rs::ply::{Property, PropertyAccess};
@@ -166,17 +168,17 @@ impl SplatPoint {
 ///
 /// # Returns
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
-pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
+pub fn load_ply_from_bytes(data: &[u8]) -> PlyResult<Vec<PlyGaussian>> {
     let mut cursor = Cursor::new(data);
     let parser = Parser::<PlyGaussian>::new();
     let ply = parser
         .read_ply(&mut cursor)
-        .context("Failed to parse PLY data")?;
+        .map_err(|e| PlyError::Parse(e.to_string()))?;
 
     let vertices = ply
         .payload
         .get("vertex")
-        .context("PLY data has no 'vertex' element")?;
+        .ok_or_else(|| PlyError::MissingElement("vertex".to_string()))?;
     Ok(vertices.clone())
 }
 
@@ -189,19 +191,32 @@ pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
 ///
 /// # Returns
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
-pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
-    let f = File::open(path).context("Failed to open PLY file")?;
+pub fn load_ply<P: AsRef<Path>>(path: P) -> PlyResult<Vec<PlyGaussian>> {
+    let f = File::open(path)?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
     let parser = Parser::<PlyGaussian>::new();
     let ply = parser
         .read_ply(&mut f)
-        .context("Failed to parse PLY file")?;
+        .map_err(|e| PlyError::Parse(e.to_string()))?;
 
     let vertices = ply
         .payload
         .get("vertex")
-        .context("PLY file has no 'vertex' element")?;
+        .ok_or_else(|| PlyError::MissingElement("vertex".to_string()))?;
     Ok(vertices.clone())
+}
+
+/// Standard comparator for splats to ensure deterministic sorting.
+///
+/// Sorts by: sort key (ascending) -> Position X -> Position Y -> Position Z.
+/// This ensures identical output across parallel and serial implementations,
+/// and across different platforms/architectures.
+#[inline]
+pub fn compare_splats(a: &(SplatPoint, f32), b: &(SplatPoint, f32)) -> std::cmp::Ordering {
+    a.1.total_cmp(&b.1)
+        .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+        .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+        .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
 }
 
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
@@ -224,14 +239,8 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
         .collect();
 
     if sort {
-        // Parallel sort by key, tie-break by position (x, y, z)
-        // This ensures deterministic output even across different platforms/architectures
-        data.par_sort_by(|a, b| {
-            a.1.total_cmp(&b.1)
-                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-        });
+        // Use shared comparator for deterministic sorting
+        data.par_sort_by(compare_splats);
     }
 
     // Parallel strip key
@@ -258,14 +267,8 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
         .collect();
 
     if sort {
-        // Single-threaded sort by key, tie-break by position (x, y, z)
-        // This ensures deterministic output even across different platforms/architectures
-        data.sort_by(|a, b| {
-            a.1.total_cmp(&b.1)
-                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-        });
+        // Use shared comparator for deterministic sorting
+        data.sort_by(compare_splats);
     }
 
     // Strip key
@@ -280,13 +283,13 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
 /// # Arguments
 /// * `path` - Destination path.
 /// * `splats` - The data to write.
-pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> Result<()> {
-    let mut f = File::create(path).context("Failed to create output file")?;
+pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> PlyResult<()> {
+    let mut f = File::create(path)?;
 
     // Zero-copy write: Cast the slice of structs directly to a slice of bytes.
     // SplatPoint is #[repr(C)] and Pod, so this is safe and extremely fast.
     let bytes: &[u8] = bytemuck::cast_slice(splats);
-    f.write_all(bytes).context("Failed to write SPLAT data")?;
+    f.write_all(bytes)?;
 
     f.flush()?;
     Ok(())
@@ -318,7 +321,7 @@ pub fn splats_to_bytes(splats: &[SplatPoint]) -> Vec<u8> {
 ///
 /// # Returns
 /// A `Result` containing a tuple of (splat bytes, splat count) or an error.
-pub fn convert(ply_data: &[u8], sort: bool) -> Result<(Vec<u8>, usize)> {
+pub fn convert(ply_data: &[u8], sort: bool) -> PlyResult<(Vec<u8>, usize)> {
     let ply_points = load_ply_from_bytes(ply_data)?;
     let count = ply_points.len();
     let splats = ply_to_splat(ply_points, sort);
@@ -337,7 +340,7 @@ pub fn convert(ply_data: &[u8], sort: bool) -> Result<(Vec<u8>, usize)> {
 ///
 /// # Returns
 /// A `Result` containing the number of splats converted or an error.
-pub fn convert_file<P: AsRef<Path>>(input: P, output: P, sort: bool) -> Result<usize> {
+pub fn convert_file<P: AsRef<Path>>(input: P, output: P, sort: bool) -> PlyResult<usize> {
     let ply_data = load_ply(input)?;
     let count = ply_data.len();
     let splats = ply_to_splat(ply_data, sort);
@@ -502,5 +505,84 @@ end_header
         let (bytes, count) = convert(ply_content, true).expect("Failed to convert");
         assert_eq!(count, 2);
         assert_eq!(bytes.len(), 64); // 2 splats * 32 bytes
+    }
+
+    #[test]
+    fn test_compare_splats_ordering() {
+        // Test that compare_splats orders by key first
+        let splat1 = SplatPoint {
+            pos: [0.0, 0.0, 0.0],
+            scale: [1.0, 1.0, 1.0],
+            color: [0, 0, 0, 0],
+            rot: [128, 128, 128, 128],
+        };
+        let splat2 = SplatPoint {
+            pos: [1.0, 0.0, 0.0],
+            scale: [1.0, 1.0, 1.0],
+            color: [0, 0, 0, 0],
+            rot: [128, 128, 128, 128],
+        };
+
+        // splat1 with lower key should come first
+        let a = (splat1, -1.0_f32);
+        let b = (splat2, 0.0_f32);
+        assert_eq!(compare_splats(&a, &b), std::cmp::Ordering::Less);
+
+        // splat2 with lower key should come first
+        let a = (splat1, 1.0_f32);
+        let b = (splat2, 0.0_f32);
+        assert_eq!(compare_splats(&a, &b), std::cmp::Ordering::Greater);
+    }
+
+    #[test]
+    fn test_compare_splats_tiebreak() {
+        // Test that compare_splats breaks ties by position
+        let splat1 = SplatPoint {
+            pos: [0.0, 1.0, 2.0],
+            scale: [1.0, 1.0, 1.0],
+            color: [0, 0, 0, 0],
+            rot: [128, 128, 128, 128],
+        };
+        let splat2 = SplatPoint {
+            pos: [0.0, 1.0, 3.0],
+            scale: [1.0, 1.0, 1.0],
+            color: [0, 0, 0, 0],
+            rot: [128, 128, 128, 128],
+        };
+
+        // Same key, splat1 has smaller z
+        let a = (splat1, 0.0_f32);
+        let b = (splat2, 0.0_f32);
+        assert_eq!(compare_splats(&a, &b), std::cmp::Ordering::Less);
+    }
+
+    #[test]
+    fn test_ply_error_display() {
+        // Test that error messages are human-readable
+        let io_err = PlyError::Io(std::io::Error::other("test error"));
+        assert!(io_err.to_string().contains("IO error"));
+
+        let parse_err = PlyError::Parse("invalid format".to_string());
+        assert!(parse_err.to_string().contains("Failed to parse PLY file"));
+
+        let missing_err = PlyError::MissingElement("vertex".to_string());
+        assert!(missing_err.to_string().contains("Missing required element"));
+        assert!(missing_err.to_string().contains("vertex"));
+    }
+
+    #[test]
+    fn test_load_ply_from_bytes_missing_vertex() {
+        // PLY file without vertex element
+        let ply_content = b"ply
+format ascii 1.0
+element face 1
+property list uchar int vertex_indices
+end_header
+3 0 1 2
+";
+        let result = load_ply_from_bytes(ply_content);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, PlyError::MissingElement(_)));
     }
 }
