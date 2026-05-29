@@ -22,12 +22,21 @@ pub struct CliArgs {
 }
 
 /// Runs the CLI logic with the given arguments.
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(args), name = "cli_run"))]
 pub fn run<I, T>(args: I) -> Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
     let args = CliArgs::parse_from(args);
+
+    #[cfg(feature = "tracing")]
+    tracing::info!(
+        input = %args.input.display(),
+        output = %args.output.display(),
+        sort = !args.no_sort,
+        "Starting PLY to SPLAT conversion"
+    );
     let start_total = Instant::now();
 
     println!("Reading PLY file: {:?}", args.input);
@@ -73,6 +82,13 @@ where
     );
 
     println!("Total time: {:.2}s", start_total.elapsed().as_secs_f32());
+
+    #[cfg(feature = "tracing")]
+    tracing::info!(
+        splat_count = splats.len(),
+        total_time_secs = start_total.elapsed().as_secs_f32(),
+        "Conversion complete"
+    );
 
     Ok(())
 }
