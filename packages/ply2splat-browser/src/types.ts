@@ -38,35 +38,44 @@ export interface ConvertOptions {
 }
 
 /**
- * Message types for communication between main thread and worker.
- * @internal
- */
-export type WorkerMessageType = "init" | "convert" | "init-complete" | "convert-complete" | "error";
-
-/**
  * Message sent from main thread to worker.
  * @internal
  */
-export interface WorkerRequest {
-  type: "init" | "convert";
-  id: number;
-  payload?: {
-    wasmUrl?: string;
-    wasiWorkerUrl?: string;
-    asyncWorkPoolSize?: number;
-    plyData?: Uint8Array;
-    sort?: boolean;
-  };
-}
+export type WorkerRequest =
+  | {
+      type: "init";
+      id: number;
+      payload: {
+        wasmUrl: string;
+        wasiWorkerUrl: string;
+        asyncWorkPoolSize: number;
+      };
+    }
+  | {
+      type: "convert";
+      id: number;
+      payload: {
+        plyData: Uint8Array;
+        sort: boolean;
+      };
+    };
 
 /**
  * Message sent from worker to main thread.
  * @internal
  */
-export interface WorkerResponse {
-  type: "init-complete" | "convert-complete" | "error";
-  id: number;
-  result?: ConversionResult;
-  error?: string;
-}
-
+export type WorkerResponse =
+  | {
+      type: "init-complete";
+      id: number;
+    }
+  | {
+      type: "convert-complete";
+      id: number;
+      result: ConversionResult;
+    }
+  | {
+      type: "error";
+      id: number;
+      error: string;
+    };

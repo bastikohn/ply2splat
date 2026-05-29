@@ -5,7 +5,7 @@
 
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
-use ply2splat::{load_ply_from_bytes, ply_to_splat, splats_to_bytes};
+use ply2splat::{convert as convert_bytes, splat_count_from_bytes};
 
 /// Convert PLY data to SPLAT format.
 ///
@@ -15,23 +15,13 @@ use ply2splat::{load_ply_from_bytes, ply_to_splat, splats_to_bytes};
 #[napi]
 pub fn convert(ply_data: Buffer, sort: Option<bool>) -> Result<ConversionResult> {
     let sort = sort.unwrap_or(true);
-
-    let ply_points = load_ply_from_bytes(&ply_data)
-        .map_err(|e| Error::from_reason(format!("Failed to parse PLY data: {}", e)))?;
-
-    let count = ply_points.len() as u32;
-    let splats = ply_to_splat(ply_points, sort);
-    let data = splats_to_bytes(&splats);
+    let (data, count) = convert_bytes(&ply_data, sort)
+        .map_err(|e| Error::from_reason(format!("Failed to convert PLY data: {}", e)))?;
 
     Ok(ConversionResult {
         data: Buffer::from(data),
-        count,
+        count: count as u32,
     })
-}
-
-#[napi]
-pub fn simple_fn() -> u32 {
-    1
 }
 
 /// Result of a PLY to SPLAT conversion.
@@ -49,13 +39,9 @@ pub struct ConversionResult {
 /// @returns Number of splats in the data
 #[napi]
 pub fn get_splat_count(splat_data: Buffer) -> Result<u32> {
-    if !splat_data.len().is_multiple_of(32) {
-        return Err(Error::from_reason(format!(
-            "Invalid SPLAT data: size {} is not a multiple of 32 bytes",
-            splat_data.len()
-        )));
-    }
-    Ok((splat_data.len() / 32) as u32)
+    splat_count_from_bytes(&splat_data)
+        .map(|count| count as u32)
+        .map_err(|e| Error::from_reason(e.to_string()))
 }
 
 /// Run the ply2splat CLI directly.

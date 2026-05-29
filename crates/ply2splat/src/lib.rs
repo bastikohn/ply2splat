@@ -12,20 +12,22 @@
 //! - **Sorting**: Automatically sorts splats by importance (volume * opacity) and spatial position
 //!   for deterministic rendering order.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use bytemuck::{Pod, Zeroable};
 use ply_rs::parser::Parser;
 use ply_rs::ply::{Property, PropertyAccess};
 #[cfg(feature = "parallel")]
 use rayon::prelude::*;
+use std::cmp::Ordering;
 use std::fs::File;
-use std::io::{BufReader, Cursor, Write};
+use std::io::{BufReader, Cursor, Read, Write};
 use std::path::Path;
 
 #[cfg(feature = "cli")]
 pub mod cli;
 
 const SH_C0: f32 = 0.282_094_8;
+pub const SPLAT_POINT_BYTES: usize = 32;
 
 /// Represents a raw Gaussian Splat read from a PLY file.
 ///
@@ -53,30 +55,124 @@ pub struct PlyGaussian {
     pub rot_3: f32,
 }
 
-impl PropertyAccess for PlyGaussian {
+#[derive(Debug, Clone, Default)]
+struct RawPlyGaussian {
+    x: Option<f32>,
+    y: Option<f32>,
+    z: Option<f32>,
+    f_dc_0: Option<f32>,
+    f_dc_1: Option<f32>,
+    f_dc_2: Option<f32>,
+    opacity: Option<f32>,
+    scale_0: Option<f32>,
+    scale_1: Option<f32>,
+    scale_2: Option<f32>,
+    rot_0: Option<f32>,
+    rot_1: Option<f32>,
+    rot_2: Option<f32>,
+    rot_3: Option<f32>,
+    errors: Vec<String>,
+}
+
+impl RawPlyGaussian {
+    fn set_float(&mut self, key: &str, property: Property) -> Option<f32> {
+        match property {
+            Property::Float(v) => Some(v),
+            Property::Double(v) => Some(v as f32),
+            other => {
+                self.errors.push(format!(
+                    "`{key}` has type {}, expected float",
+                    property_type_name(&other)
+                ));
+                None
+            }
+        }
+    }
+
+    fn into_validated(self, vertex_index: usize) -> Result<PlyGaussian> {
+        if !self.errors.is_empty() {
+            bail!(
+                "vertex {vertex_index} has invalid PLY properties: {}",
+                self.errors.join(", ")
+            );
+        }
+
+        Ok(PlyGaussian {
+            x: required_property(self.x, "x", vertex_index)?,
+            y: required_property(self.y, "y", vertex_index)?,
+            z: required_property(self.z, "z", vertex_index)?,
+            f_dc_0: required_property(self.f_dc_0, "f_dc_0", vertex_index)?,
+            f_dc_1: required_property(self.f_dc_1, "f_dc_1", vertex_index)?,
+            f_dc_2: required_property(self.f_dc_2, "f_dc_2", vertex_index)?,
+            opacity: required_property(self.opacity, "opacity", vertex_index)?,
+            scale_0: required_property(self.scale_0, "scale_0", vertex_index)?,
+            scale_1: required_property(self.scale_1, "scale_1", vertex_index)?,
+            scale_2: required_property(self.scale_2, "scale_2", vertex_index)?,
+            rot_0: required_property(self.rot_0, "rot_0", vertex_index)?,
+            rot_1: required_property(self.rot_1, "rot_1", vertex_index)?,
+            rot_2: required_property(self.rot_2, "rot_2", vertex_index)?,
+            rot_3: required_property(self.rot_3, "rot_3", vertex_index)?,
+        })
+    }
+}
+
+impl PropertyAccess for RawPlyGaussian {
     fn new() -> Self {
         Self::default()
     }
 
     fn set_property(&mut self, key: String, property: Property) {
-        match (key.as_str(), property) {
-            ("x", Property::Float(v)) => self.x = v,
-            ("y", Property::Float(v)) => self.y = v,
-            ("z", Property::Float(v)) => self.z = v,
-            ("f_dc_0", Property::Float(v)) => self.f_dc_0 = v,
-            ("f_dc_1", Property::Float(v)) => self.f_dc_1 = v,
-            ("f_dc_2", Property::Float(v)) => self.f_dc_2 = v,
-            ("opacity", Property::Float(v)) => self.opacity = v,
-            ("scale_0", Property::Float(v)) => self.scale_0 = v,
-            ("scale_1", Property::Float(v)) => self.scale_1 = v,
-            ("scale_2", Property::Float(v)) => self.scale_2 = v,
-            ("rot_0", Property::Float(v)) => self.rot_0 = v,
-            ("rot_1", Property::Float(v)) => self.rot_1 = v,
-            ("rot_2", Property::Float(v)) => self.rot_2 = v,
-            ("rot_3", Property::Float(v)) => self.rot_3 = v,
-            _ => {} // Ignore other properties
+        match key.as_str() {
+            "x" => self.x = self.set_float("x", property),
+            "y" => self.y = self.set_float("y", property),
+            "z" => self.z = self.set_float("z", property),
+            "f_dc_0" => self.f_dc_0 = self.set_float("f_dc_0", property),
+            "f_dc_1" => self.f_dc_1 = self.set_float("f_dc_1", property),
+            "f_dc_2" => self.f_dc_2 = self.set_float("f_dc_2", property),
+            "opacity" => self.opacity = self.set_float("opacity", property),
+            "scale_0" => self.scale_0 = self.set_float("scale_0", property),
+            "scale_1" => self.scale_1 = self.set_float("scale_1", property),
+            "scale_2" => self.scale_2 = self.set_float("scale_2", property),
+            "rot_0" => self.rot_0 = self.set_float("rot_0", property),
+            "rot_1" => self.rot_1 = self.set_float("rot_1", property),
+            "rot_2" => self.rot_2 = self.set_float("rot_2", property),
+            "rot_3" => self.rot_3 = self.set_float("rot_3", property),
+            _ => {}
         }
     }
+}
+
+fn required_property(value: Option<f32>, field: &'static str, vertex_index: usize) -> Result<f32> {
+    value.with_context(|| format!("vertex {vertex_index} is missing required property `{field}`"))
+}
+
+fn property_type_name(property: &Property) -> &'static str {
+    match property {
+        Property::Char(_) => "char",
+        Property::UChar(_) => "uchar",
+        Property::Short(_) => "short",
+        Property::UShort(_) => "ushort",
+        Property::Int(_) => "int",
+        Property::UInt(_) => "uint",
+        Property::Float(_) => "float",
+        Property::Double(_) => "double",
+        Property::ListChar(_) => "list char",
+        Property::ListUChar(_) => "list uchar",
+        Property::ListShort(_) => "list short",
+        Property::ListUShort(_) => "list ushort",
+        Property::ListInt(_) => "list int",
+        Property::ListUInt(_) => "list uint",
+        Property::ListFloat(_) => "list float",
+        Property::ListDouble(_) => "list double",
+    }
+}
+
+fn validate_vertices(vertices: Vec<RawPlyGaussian>) -> Result<Vec<PlyGaussian>> {
+    vertices
+        .into_iter()
+        .enumerate()
+        .map(|(index, vertex)| vertex.into_validated(index))
+        .collect()
 }
 
 /// Represents a processed Gaussian Splat ready for serialization.
@@ -168,7 +264,7 @@ impl SplatPoint {
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
 pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
     let mut cursor = Cursor::new(data);
-    let parser = Parser::<PlyGaussian>::new();
+    let parser = Parser::<RawPlyGaussian>::new();
     let ply = parser
         .read_ply(&mut cursor)
         .context("Failed to parse PLY data")?;
@@ -177,7 +273,7 @@ pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
         .payload
         .get("vertex")
         .context("PLY data has no 'vertex' element")?;
-    Ok(vertices.clone())
+    validate_vertices(vertices.clone())
 }
 
 /// Loads a PLY file and parses it into a vector of `PlyGaussian`.
@@ -192,7 +288,7 @@ pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
 pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     let f = File::open(path).context("Failed to open PLY file")?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
-    let parser = Parser::<PlyGaussian>::new();
+    let parser = Parser::<RawPlyGaussian>::new();
     let ply = parser
         .read_ply(&mut f)
         .context("Failed to parse PLY file")?;
@@ -201,7 +297,14 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
         .payload
         .get("vertex")
         .context("PLY file has no 'vertex' element")?;
-    Ok(vertices.clone())
+    validate_vertices(vertices.clone())
+}
+
+fn compare_splat_entries(a: &(SplatPoint, f32), b: &(SplatPoint, f32)) -> Ordering {
+    a.1.total_cmp(&b.1)
+        .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
+        .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
+        .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
 }
 
 /// Converts a list of `PlyGaussian` structs into the optimized `SplatPoint` format.
@@ -226,12 +329,7 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
     if sort {
         // Parallel sort by key, tie-break by position (x, y, z)
         // This ensures deterministic output even across different platforms/architectures
-        data.par_sort_by(|a, b| {
-            a.1.total_cmp(&b.1)
-                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-        });
+        data.par_sort_by(compare_splat_entries);
     }
 
     // Parallel strip key
@@ -260,12 +358,7 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
     if sort {
         // Single-threaded sort by key, tie-break by position (x, y, z)
         // This ensures deterministic output even across different platforms/architectures
-        data.sort_by(|a, b| {
-            a.1.total_cmp(&b.1)
-                .then_with(|| a.0.pos[0].total_cmp(&b.0.pos[0]))
-                .then_with(|| a.0.pos[1].total_cmp(&b.0.pos[1]))
-                .then_with(|| a.0.pos[2].total_cmp(&b.0.pos[2]))
-        });
+        data.sort_by(compare_splat_entries);
     }
 
     // Strip key
@@ -305,6 +398,35 @@ pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> Result<()> 
 /// A `Vec<u8>` containing the raw splat data.
 pub fn splats_to_bytes(splats: &[SplatPoint]) -> Vec<u8> {
     bytemuck::cast_slice(splats).to_vec()
+}
+
+/// Returns the number of splats encoded in a SPLAT byte buffer.
+pub fn splat_count_from_bytes(splat_data: &[u8]) -> Result<usize> {
+    if !splat_data.len().is_multiple_of(SPLAT_POINT_BYTES) {
+        bail!(
+            "Invalid SPLAT data: size {} is not a multiple of {SPLAT_POINT_BYTES} bytes",
+            splat_data.len()
+        );
+    }
+    Ok(splat_data.len() / SPLAT_POINT_BYTES)
+}
+
+/// Converts raw SPLAT bytes into `SplatPoint`s after validating the byte length.
+pub fn splats_from_bytes(splat_data: &[u8]) -> Result<Vec<SplatPoint>> {
+    splat_count_from_bytes(splat_data)?;
+    Ok(splat_data
+        .chunks_exact(SPLAT_POINT_BYTES)
+        .map(bytemuck::pod_read_unaligned)
+        .collect())
+}
+
+/// Loads a SPLAT file and returns the decoded splat points.
+pub fn load_splat<P: AsRef<Path>>(path: P) -> Result<Vec<SplatPoint>> {
+    let mut f = File::open(path).context("Failed to open SPLAT file")?;
+    let mut bytes = Vec::new();
+    f.read_to_end(&mut bytes)
+        .context("Failed to read SPLAT file")?;
+    splats_from_bytes(&bytes)
 }
 
 /// Converts PLY data bytes to SPLAT format bytes.
@@ -457,6 +579,63 @@ end_header
     }
 
     #[test]
+    fn test_load_ply_from_bytes_rejects_missing_required_property() {
+        let ply_content = b"ply
+format ascii 1.0
+element vertex 1
+property float x
+property float y
+property float z
+property float f_dc_0
+property float f_dc_1
+property float f_dc_2
+property float opacity
+property float scale_0
+property float scale_1
+property float scale_2
+property float rot_0
+property float rot_1
+property float rot_2
+end_header
+1.0 2.0 3.0 0.5 0.5 0.5 0.0 0.1 0.1 0.1 1.0 0.0 0.0
+";
+
+        let error = load_ply_from_bytes(ply_content).expect_err("missing rot_3 should fail");
+        assert!(
+            error
+                .to_string()
+                .contains("missing required property `rot_3`")
+        );
+    }
+
+    #[test]
+    fn test_load_ply_from_bytes_rejects_invalid_required_property_type() {
+        let ply_content = b"ply
+format ascii 1.0
+element vertex 1
+property float x
+property float y
+property float z
+property float f_dc_0
+property float f_dc_1
+property float f_dc_2
+property uchar opacity
+property float scale_0
+property float scale_1
+property float scale_2
+property float rot_0
+property float rot_1
+property float rot_2
+property float rot_3
+end_header
+1.0 2.0 3.0 0.5 0.5 0.5 1 0.1 0.1 0.1 1.0 0.0 0.0 0.0
+";
+
+        let error = load_ply_from_bytes(ply_content).expect_err("uchar opacity should fail");
+        assert!(error.to_string().contains("`opacity` has type uchar"));
+    }
+
+    #[test]
     fn test_splats_to_bytes() {
         let splat = SplatPoint {
             pos: [1.0, 2.0, 3.0],
@@ -467,12 +646,18 @@ end_header
 
         let bytes = splats_to_bytes(&[splat]);
 
-        assert_eq!(bytes.len(), 32);
+        assert_eq!(bytes.len(), SPLAT_POINT_BYTES);
 
         let recovered: &[SplatPoint] = bytemuck::cast_slice(&bytes);
         assert_eq!(recovered.len(), 1);
         assert_eq!(recovered[0].pos[0], 1.0);
         assert_eq!(recovered[0].color[0], 255);
+    }
+
+    #[test]
+    fn test_splats_from_bytes_rejects_invalid_size() {
+        let error = splats_from_bytes(&[0; 31]).expect_err("invalid SPLAT byte length should fail");
+        assert!(error.to_string().contains("not a multiple"));
     }
 
     #[test]
@@ -501,6 +686,6 @@ end_header
 
         let (bytes, count) = convert(ply_content, true).expect("Failed to convert");
         assert_eq!(count, 2);
-        assert_eq!(bytes.len(), 64); // 2 splats * 32 bytes
+        assert_eq!(bytes.len(), 2 * SPLAT_POINT_BYTES);
     }
 }

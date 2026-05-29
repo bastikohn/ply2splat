@@ -19,7 +19,6 @@ import type { WorkerRequest, WorkerResponse } from "./types";
 interface WasmModule {
   convert(data: Uint8Array, sort: boolean): { data: Uint8Array; count: number };
   getSplatCount(data: Uint8Array): number;
-  simpleFn(): number;
 }
 
 let wasmModule: WasmModule | null = null;
@@ -30,11 +29,6 @@ async function initWasm(
   asyncWorkPoolSize: number = 4
 ): Promise<void> {
   if (wasmModule) return;
-
-  console.log("[ply2splat worker] Initializing WASM...", {
-    wasmUrl,
-    wasiWorkerUrl,
-  });
 
   const __wasi = new __WASI({
     version: "preview1",
@@ -48,18 +42,17 @@ async function initWasm(
     shared: true,
   });
 
-  console.log("[ply2splat worker] Fetching WASM file...");
-  const __wasmFile = await fetch(wasmUrl).then((res) => res.arrayBuffer());
-  console.log(
-    "[ply2splat worker] WASM file fetched, size:",
-    __wasmFile.byteLength
-  );
+  const __wasmResponse = await fetch(wasmUrl);
+  if (!__wasmResponse.ok) {
+    throw new Error(
+      `Failed to fetch WASM module: ${__wasmResponse.status} ${__wasmResponse.statusText}`
+    );
+  }
+  const __wasmFile = await __wasmResponse.arrayBuffer();
 
   // Convert relative URL to absolute URL for the child worker
   const absoluteWorkerUrl = new URL(wasiWorkerUrl, self.location.href).href;
-  console.log("[ply2splat worker] Child worker URL:", absoluteWorkerUrl);
 
-  console.log("[ply2splat worker] Instantiating NAPI module (async)...");
   const { napiModule: __napiModule } = await __emnapiInstantiateNapiModule(
     __wasmFile,
     {
@@ -67,10 +60,6 @@ async function initWasm(
       asyncWorkPoolSize,
       wasi: __wasi,
       onCreateWorker() {
-        console.log(
-          "[ply2splat worker] Creating child worker at:",
-          absoluteWorkerUrl
-        );
         const worker = new Worker(absoluteWorkerUrl, {
           type: "module",
         });
@@ -96,13 +85,12 @@ async function initWasm(
   );
 
   wasmModule = __napiModule.exports as unknown as WasmModule;
-  console.log("[ply2splat worker] WASM initialized successfully");
 }
 
 function sendResponse(response: WorkerResponse): void {
   if (response.type === "convert-complete" && response.result) {
     // Transfer the buffer back to main thread for better performance
-    self.postMessage(response, [response.result.data.buffer]);
+    self.postMessage(response, [response.result.data.buffer as Transferable]);
   } else {
     self.postMessage(response);
   }
@@ -110,41 +98,24 @@ function sendResponse(response: WorkerResponse): void {
 
 self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   const { type, id, payload } = e.data;
-  console.log("[ply2splat worker] Received message:", type, id);
 
   try {
     if (type === "init") {
-      if (!payload?.wasmUrl || !payload?.wasiWorkerUrl) {
-        throw new Error("wasmUrl and wasiWorkerUrl are required for init");
-      }
       await initWasm(
         payload.wasmUrl,
         payload.wasiWorkerUrl,
         payload.asyncWorkPoolSize ?? 4
       );
-      console.log("[ply2splat worker] Sending init-complete");
       sendResponse({ type: "init-complete", id });
     } else if (type === "convert") {
       if (!wasmModule) {
         throw new Error("WASM module not initialized");
       }
-      if (!payload?.plyData) {
+      if (!payload.plyData) {
         throw new Error("plyData is required for convert");
       }
 
-      const simpleResult = wasmModule.simpleFn();
-      console.log(`Simple result: `, simpleResult);
-      console.log(
-        "[ply2splat worker] Converting PLY data, size:",
-        payload.plyData.byteLength
-      );
-
-      const result = wasmModule.convert(payload.plyData, payload.sort ?? true);
-
-      console.log(
-        "[ply2splat worker] Conversion complete, splats:",
-        result.count
-      );
+      const result = wasmModule.convert(payload.plyData, payload.sort);
 
       // Create a copy of the data because the original is in SharedArrayBuffer
       // which cannot be transferred.
@@ -158,7 +129,6 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       sendResponse(response);
     }
   } catch (error) {
-    console.error("[ply2splat worker] Error:", error);
     sendResponse({
       type: "error",
       id,

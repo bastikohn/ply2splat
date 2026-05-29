@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use ply2splat::SplatPoint;
+use ply2splat::{SPLAT_POINT_BYTES, SplatPoint};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Write;
@@ -52,8 +52,7 @@ fn test_cli_conversion() -> Result<(), Box<dyn std::error::Error>> {
 
     // Verify output exists and has correct size
     let content = std::fs::read(&output_path)?;
-    // 2 points * 32 bytes = 64 bytes
-    assert_eq!(content.len(), 64);
+    assert_eq!(content.len(), 2 * SPLAT_POINT_BYTES);
 
     Ok(())
 }
@@ -61,7 +60,7 @@ fn test_cli_conversion() -> Result<(), Box<dyn std::error::Error>> {
 #[test]
 fn test_splat_struct_layout() {
     // Ensure the struct is exactly 32 bytes
-    assert_eq!(std::mem::size_of::<SplatPoint>(), 32);
+    assert_eq!(std::mem::size_of::<SplatPoint>(), SPLAT_POINT_BYTES);
     assert_eq!(std::mem::align_of::<SplatPoint>(), 4);
 }
 

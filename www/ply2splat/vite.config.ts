@@ -62,8 +62,8 @@ export default defineConfig({
       "@napi-rs/wasm-runtime",
     ],
   },
-  build: {
-    target: "esnext",
-  },
-  assetsInclude: ["**/*.wasm"],
+	build: {
+		target: "esnext",
+	},
+	assetsInclude: ["**/*.wasm"],
 });

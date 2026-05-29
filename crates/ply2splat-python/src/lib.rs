@@ -3,11 +3,13 @@
 //! This module exposes the core functionality of the ply2splat library to Python
 //! via PyO3, allowing Python users to convert PLY files to SPLAT format.
 
-use ply2splat_lib::{SplatPoint, load_ply, ply_to_splat, save_splat};
+use ply2splat_lib::{
+    SplatPoint, convert as convert_bytes, convert_file, load_ply, load_splat, ply_to_splat,
+    splats_to_bytes,
+};
 use pyo3::exceptions::PyIOError;
 use pyo3::prelude::*;
-use std::fs::File;
-use std::io::{BufReader, Read};
+use std::fs;
 
 /// A single Gaussian Splat with position, scale, color, and rotation.
 ///
@@ -94,7 +96,7 @@ impl SplatData {
 
     /// Get the raw bytes representation of all splats.
     fn to_bytes(&self) -> Vec<u8> {
-        bytemuck::cast_slice(&self.splats).to_vec()
+        splats_to_bytes(&self.splats)
     }
 
     fn __repr__(&self) -> String {
@@ -145,11 +147,7 @@ impl SplatIterator {
 #[pyfunction]
 #[pyo3(signature = (input_path, output_path, sort=true))]
 fn convert(input_path: &str, output_path: &str, sort: bool) -> PyResult<usize> {
-    let ply_data = load_ply(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
-    let count = ply_data.len();
-    let splats = ply_to_splat(ply_data, sort);
-    save_splat(output_path, &splats).map_err(|e| PyIOError::new_err(e.to_string()))?;
-    Ok(count)
+    convert_file(input_path, output_path, sort).map_err(|e| PyIOError::new_err(e.to_string()))
 }
 
 /// Load a PLY file and return splat data as bytes.
@@ -171,11 +169,8 @@ fn convert(input_path: &str, output_path: &str, sort: bool) -> PyResult<usize> {
 #[pyfunction]
 #[pyo3(signature = (input_path, sort=true))]
 fn load_and_convert(input_path: &str, sort: bool) -> PyResult<(Vec<u8>, usize)> {
-    let ply_data = load_ply(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
-    let count = ply_data.len();
-    let splats = ply_to_splat(ply_data, sort);
-    let bytes: Vec<u8> = bytemuck::cast_slice(&splats).to_vec();
-    Ok((bytes, count))
+    let ply_data = fs::read(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
+    convert_bytes(&ply_data, sort).map_err(|e| PyIOError::new_err(e.to_string()))
 }
 
 /// Load a PLY file and return structured splat data.
@@ -215,21 +210,7 @@ fn load_ply_file(input_path: &str, sort: bool) -> PyResult<SplatData> {
 ///     IOError: If the input file cannot be read or has invalid format
 #[pyfunction]
 fn load_splat_file(input_path: &str) -> PyResult<SplatData> {
-    let file = File::open(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
-    let mut reader = BufReader::new(file);
-    let mut bytes = Vec::new();
-    reader
-        .read_to_end(&mut bytes)
-        .map_err(|e| PyIOError::new_err(e.to_string()))?;
-
-    if bytes.len() % 32 != 0 {
-        return Err(PyIOError::new_err(format!(
-            "Invalid SPLAT file: size {} is not a multiple of 32 bytes",
-            bytes.len()
-        )));
-    }
-
-    let splats: Vec<SplatPoint> = bytemuck::cast_slice(&bytes).to_vec();
+    let splats = load_splat(input_path).map_err(|e| PyIOError::new_err(e.to_string()))?;
     Ok(SplatData { splats })
 }
 

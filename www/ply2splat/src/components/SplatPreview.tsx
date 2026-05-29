@@ -1,7 +1,7 @@
-import { Canvas } from "@react-three/fiber";
 import { CameraControls, Splat } from "@react-three/drei";
-import { Suspense, useEffect, useState } from "react";
+import { Canvas } from "@react-three/fiber";
 import { Loader2 } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
 
 interface SplatPreviewProps {
 	splatData: Uint8Array;
@@ -34,10 +34,8 @@ export function SplatPreview({ splatData }: SplatPreviewProps) {
 				type: "application/octet-stream",
 			});
 			url = URL.createObjectURL(blob);
-			console.log("Created URL:", url);
 			setSplatUrl(url);
 		} catch (err) {
-			console.error("Failed to create blob URL:", err);
 			setError(err instanceof Error ? err.message : "Failed to load preview");
 			setSplatUrl(null);
 		}
@@ -45,7 +43,6 @@ export function SplatPreview({ splatData }: SplatPreviewProps) {
 		// Cleanup blob URL when component unmounts or splatData changes
 		return () => {
 			if (url) {
-				console.log("Revoking url", url);
 				URL.revokeObjectURL(url);
 			}
 		};
