@@ -168,6 +168,7 @@ impl SplatPoint {
 ///
 /// # Returns
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(data), fields(data_len = data.len())))]
 pub fn load_ply_from_bytes(data: &[u8]) -> PlyResult<Vec<PlyGaussian>> {
     let mut cursor = Cursor::new(data);
     let parser = Parser::<PlyGaussian>::new();
@@ -191,6 +192,7 @@ pub fn load_ply_from_bytes(data: &[u8]) -> PlyResult<Vec<PlyGaussian>> {
 ///
 /// # Returns
 /// A `Result` containing the vector of parsed `PlyGaussian` structs or an error.
+#[cfg_attr(feature = "tracing", tracing::instrument(fields(path = %path.as_ref().display())))]
 pub fn load_ply<P: AsRef<Path>>(path: P) -> PlyResult<Vec<PlyGaussian>> {
     let f = File::open(path)?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
@@ -231,6 +233,7 @@ pub fn compare_splats(a: &(SplatPoint, f32), b: &(SplatPoint, f32)) -> std::cmp:
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
 #[cfg(feature = "parallel")]
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(ply_points), fields(vertex_count = ply_points.len(), sort, parallel = true)))]
 pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
     // Parallel convert to (SplatPoint, key)
     let mut data: Vec<(SplatPoint, f32)> = ply_points
@@ -259,6 +262,7 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
 /// # Returns
 /// A vector of `SplatPoint` structs ready for saving/rendering.
 #[cfg(not(feature = "parallel"))]
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(ply_points), fields(vertex_count = ply_points.len(), sort, parallel = false)))]
 pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint> {
     // Single-threaded convert to (SplatPoint, key)
     let mut data: Vec<(SplatPoint, f32)> = ply_points
@@ -283,6 +287,7 @@ pub fn ply_to_splat(ply_points: Vec<PlyGaussian>, sort: bool) -> Vec<SplatPoint>
 /// # Arguments
 /// * `path` - Destination path.
 /// * `splats` - The data to write.
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(splats), fields(path = %path.as_ref().display(), splat_count = splats.len(), bytes = splats.len() * 32)))]
 pub fn save_splat<P: AsRef<Path>>(path: P, splats: &[SplatPoint]) -> PlyResult<()> {
     let mut f = File::create(path)?;
 
@@ -321,6 +326,7 @@ pub fn splats_to_bytes(splats: &[SplatPoint]) -> Vec<u8> {
 ///
 /// # Returns
 /// A `Result` containing a tuple of (splat bytes, splat count) or an error.
+#[cfg_attr(feature = "tracing", tracing::instrument(skip(ply_data), fields(input_bytes = ply_data.len(), sort)))]
 pub fn convert(ply_data: &[u8], sort: bool) -> PlyResult<(Vec<u8>, usize)> {
     let ply_points = load_ply_from_bytes(ply_data)?;
     let count = ply_points.len();
@@ -340,6 +346,7 @@ pub fn convert(ply_data: &[u8], sort: bool) -> PlyResult<(Vec<u8>, usize)> {
 ///
 /// # Returns
 /// A `Result` containing the number of splats converted or an error.
+#[cfg_attr(feature = "tracing", tracing::instrument(fields(input = %input.as_ref().display(), output = %output.as_ref().display(), sort)))]
 pub fn convert_file<P: AsRef<Path>>(input: P, output: P, sort: bool) -> PlyResult<usize> {
     let ply_data = load_ply(input)?;
     let count = ply_data.len();
