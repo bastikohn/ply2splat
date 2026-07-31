@@ -1,5 +1,6 @@
 use assert_cmd::Command;
 use ply2splat::{SPLAT_POINT_BYTES, SplatPoint};
+use predicates::prelude::*;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::Write;
@@ -58,6 +59,19 @@ fn test_cli_conversion() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_cli_usage_error_exit_code_and_rendering() {
+    let mut cmd = Command::new(assert_cmd::cargo::cargo_bin("ply2splat"));
+    cmd.arg("--bogus-flag");
+
+    // clap usage errors must keep the conventional exit code 2 and a single
+    // "error:" prefix (no anyhow "Error: error:" double prefix or backtrace).
+    cmd.assert()
+        .code(2)
+        .stderr(predicates::str::starts_with("error:"))
+        .stderr(predicates::str::contains("Stack backtrace").not());
+}
+
+#[test]
 fn test_splat_struct_layout() {
     // Ensure the struct is exactly 32 bytes
     assert_eq!(std::mem::size_of::<SplatPoint>(), SPLAT_POINT_BYTES);
@@ -65,9 +79,11 @@ fn test_splat_struct_layout() {
 }
 
 fn get_cache_dir() -> PathBuf {
-    let cache_dir = PathBuf::from("test_cache");
+    // Anchor on the crate manifest dir so the location matches the CI cache
+    // path regardless of the test binary's working directory.
+    let cache_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test_cache");
     if !cache_dir.exists() {
-        fs::create_dir(&cache_dir).expect("Failed to create cache dir");
+        fs::create_dir_all(&cache_dir).expect("Failed to create cache dir");
     }
     cache_dir
 }

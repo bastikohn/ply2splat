@@ -23,7 +23,7 @@ jobs:
     - name: Cache Test Data
       uses: actions/cache@v4
       with:
-        path: test_cache
+        path: crates/ply2splat/test_cache
         key: test-data-${{ hashFiles('crates/ply2splat/tests/integration_test.rs') }}
     - name: Run tests
       run: cargo test --workspace --verbose
