@@ -575,4 +575,3 @@ module.exports = nativeBinding
 module.exports.cli = nativeBinding.cli
 module.exports.convert = nativeBinding.convert
 module.exports.getSplatCount = nativeBinding.getSplatCount
-module.exports.simpleFn = nativeBinding.simpleFn

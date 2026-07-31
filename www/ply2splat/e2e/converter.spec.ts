@@ -1,6 +1,7 @@
-import { test, expect } from "@playwright/test";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { expect, test } from "@playwright/test";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,9 +27,7 @@ test.describe("PLY to SPLAT Converter", () => {
 		await expect(page.getByText("PLY files only")).toBeVisible();
 	});
 
-	test("should convert a PLY file and show success state", async ({
-		page,
-	}) => {
+	test("should convert a PLY file and show success state", async ({ page }) => {
 		await page.goto("/");
 
 		// Get the hidden file input and upload the test file
@@ -127,12 +126,13 @@ test.describe("PLY to SPLAT Converter", () => {
 
 		// Verify download is triggered
 		const download = await downloadPromise;
-		// The download uses the original filename, verify it's triggered
-		expect(download.suggestedFilename()).toBeTruthy();
+		expect(download.suggestedFilename()).toBe("test.splat");
 
 		// Verify file has content (100 splats * 32 bytes = 3200 bytes)
 		const downloadPath = await download.path();
 		expect(downloadPath).toBeTruthy();
+		const data = await fs.readFile(downloadPath as string);
+		expect(data.byteLength).toBe(3200);
 	});
 
 	test("should allow converting another file", async ({ page }) => {
@@ -227,10 +227,12 @@ test.describe("Real-world PLY file conversion", () => {
 
 		// Verify download is triggered
 		const download = await downloadPromise;
-		expect(download.suggestedFilename()).toBeTruthy();
+		expect(download.suggestedFilename()).toBe("truck.splat");
 
 		// Verify file path exists
 		const downloadPath = await download.path();
 		expect(downloadPath).toBeTruthy();
+		const stats = await fs.stat(downloadPath as string);
+		expect(stats.size).toBe(2_056_645 * 32);
 	});
 });

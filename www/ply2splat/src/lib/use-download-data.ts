@@ -22,6 +22,11 @@ export const downloadData = (
 	}, 100);
 };
 
+const splatFileName = (fileName: string) =>
+	fileName.toLowerCase().endsWith(".ply")
+		? `${fileName.slice(0, -4)}.splat`
+		: `${fileName}.splat`;
+
 export const useDownloadSplat = (
 	splatData: Uint8Array<ArrayBufferLike> | null,
 	fileName: string | null,
@@ -35,7 +40,7 @@ export const useDownloadSplat = (
 		const url = URL.createObjectURL(blob);
 
 		downloadData(url, {
-			fileName,
+			fileName: splatFileName(fileName),
 			onCleanup: () => {
 				// Revoke URL after download has had time to start
 				URL.revokeObjectURL(url);

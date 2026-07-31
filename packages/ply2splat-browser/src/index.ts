@@ -33,17 +33,45 @@ import type {
 } from "./types";
 import wasmUrl from "@ply2splat/native-wasm32-wasi/ply2splat-native.wasm32-wasi.wasm?url";
 
+interface ClientConfig {
+  wasmUrl?: string;
+  mainWorkerUrl?: string;
+  wasiWorkerUrl?: string;
+  asyncWorkPoolSize?: number;
+}
+
 const defaultMainWorkerUrl = new URL("./worker.js", import.meta.url).toString();
 const defaultWasiWorkerUrl = new URL(
   "./wasi-worker.js",
   import.meta.url
 ).toString();
+const defaultAsyncWorkPoolSize = 4;
 
 // Asset URLs - these need to be set before initialization
 let configuredWasmUrl: string = wasmUrl;
 let configuredMainWorkerUrl: string = defaultMainWorkerUrl;
 let configuredWasiWorkerUrl: string = defaultWasiWorkerUrl;
-let configuredAsyncWorkPoolSize = 4;
+let configuredAsyncWorkPoolSize = defaultAsyncWorkPoolSize;
+let defaultClient: Ply2SplatClient | null = null;
+
+function normalizeAsyncWorkPoolSize(size: number): number {
+  if (!Number.isInteger(size) || size < 1) {
+    throw new RangeError("asyncWorkPoolSize must be a positive integer");
+  }
+  return size;
+}
+
+function resolveClientConfig(config: ClientConfig = {}): Required<ClientConfig> {
+  return {
+    wasmUrl: config.wasmUrl ?? configuredWasmUrl,
+    mainWorkerUrl: config.mainWorkerUrl ?? configuredMainWorkerUrl,
+    wasiWorkerUrl: config.wasiWorkerUrl ?? configuredWasiWorkerUrl,
+    asyncWorkPoolSize:
+      config.asyncWorkPoolSize !== undefined
+        ? normalizeAsyncWorkPoolSize(config.asyncWorkPoolSize)
+        : configuredAsyncWorkPoolSize,
+  };
+}
 
 /**
  * Configure asset URLs for the WASM module.
@@ -70,17 +98,19 @@ let configuredAsyncWorkPoolSize = 4;
  * await initWasm();
  * ```
  */
-export function configure(options: {
-  wasmUrl?: string;
-  mainWorkerUrl?: string;
-  wasiWorkerUrl?: string;
-  asyncWorkPoolSize?: number;
-}): void {
+export function configure(options: ClientConfig): void {
   if (options.wasmUrl) configuredWasmUrl = options.wasmUrl;
   if (options.mainWorkerUrl) configuredMainWorkerUrl = options.mainWorkerUrl;
   if (options.wasiWorkerUrl) configuredWasiWorkerUrl = options.wasiWorkerUrl;
   if (options.asyncWorkPoolSize !== undefined) {
-    configuredAsyncWorkPoolSize = options.asyncWorkPoolSize;
+    configuredAsyncWorkPoolSize = normalizeAsyncWorkPoolSize(
+      options.asyncWorkPoolSize
+    );
+  }
+
+  if (defaultClient) {
+    defaultClient.terminate();
+    defaultClient = null;
   }
 }
 
@@ -125,109 +155,174 @@ export interface Ply2SplatClient {
  * client.terminate();
  * ```
  */
-export function createClient(
-  config: {
-    wasmUrl?: string;
-    mainWorkerUrl?: string;
-    wasiWorkerUrl?: string;
-    asyncWorkPoolSize?: number;
-  } = {}
-): Ply2SplatClient {
-  const wasmUrl = config.wasmUrl ?? configuredWasmUrl;
-  const mainWorkerUrl = config.mainWorkerUrl ?? configuredMainWorkerUrl;
-  const wasiWorkerUrl = config.wasiWorkerUrl ?? configuredWasiWorkerUrl;
-  const asyncWorkPoolSize =
-    config.asyncWorkPoolSize ?? configuredAsyncWorkPoolSize;
+export function createClient(config: ClientConfig = {}): Ply2SplatClient {
+  const {
+    wasmUrl,
+    mainWorkerUrl,
+    wasiWorkerUrl,
+    asyncWorkPoolSize,
+  } = resolveClientConfig(config);
   let clientWorker: Worker | null = null;
   let clientMessageId = 0;
   let clientInitialized = false;
+  let clientInitPromise: Promise<void> | null = null;
   const clientPendingMessages = new Map<
     number,
     { resolve: (value: unknown) => void; reject: (error: Error) => void }
   >();
 
+  function rejectPendingMessages(error: Error): void {
+    for (const pending of clientPendingMessages.values()) {
+      pending.reject(error);
+    }
+    clientPendingMessages.clear();
+  }
+
   function getClientWorker(): Worker {
     if (!clientWorker) {
-      console.log("[ply2splat client] Creating worker...");
       clientWorker = new Worker(mainWorkerUrl, { type: "module" });
 
       clientWorker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-        const { type, id, result, error } = e.data;
-        console.log("[ply2splat client] Worker message received:", type, id);
+        const response = e.data;
+        const pending = clientPendingMessages.get(response.id);
+        if (!pending) return;
 
-        const pending = clientPendingMessages.get(id);
-        if (pending) {
-          clientPendingMessages.delete(id);
-          if (type === "error") {
-            pending.reject(new Error(error ?? "Unknown worker error"));
-          } else {
-            pending.resolve(result);
-          }
+        clientPendingMessages.delete(response.id);
+        if (response.type === "error") {
+          pending.reject(new Error(response.error));
+        } else if (response.type === "convert-complete") {
+          pending.resolve(response.result);
+        } else {
+          pending.resolve(undefined);
         }
       };
 
       clientWorker.onerror = (e) => {
-        console.error("[ply2splat client] Worker error:", e);
+        const error = new Error(e.message || "Worker error");
+        rejectPendingMessages(error);
+        clientWorker?.terminate();
+        clientWorker = null;
+        clientInitialized = false;
+        clientInitPromise = null;
+      };
+
+      clientWorker.onmessageerror = () => {
+        const error = new Error("Worker message could not be deserialized");
+        rejectPendingMessages(error);
+        clientWorker?.terminate();
+        clientWorker = null;
+        clientInitialized = false;
+        clientInitPromise = null;
       };
     }
     return clientWorker;
   }
 
   function clientPostMessage<T>(
-    type: WorkerRequest["type"],
-    payload?: WorkerRequest["payload"]
+    request: Omit<WorkerRequest, "id">
   ): Promise<T> {
     return new Promise((resolve, reject) => {
       const id = clientMessageId++;
-      console.log("[ply2splat client] Posting message:", type, id);
       clientPendingMessages.set(id, {
         resolve: resolve as (value: unknown) => void,
         reject,
       });
-      getClientWorker().postMessage({ type, id, payload } as WorkerRequest);
+      try {
+        getClientWorker().postMessage({ ...request, id } as WorkerRequest);
+      } catch (error) {
+        clientPendingMessages.delete(id);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  }
+
+  async function initClientWasm(options?: InitOptions): Promise<void> {
+    if (clientInitialized) return;
+    if (clientInitPromise) return clientInitPromise;
+
+    clientInitPromise = clientPostMessage<void>({
+      type: "init",
+      payload: {
+        wasmUrl: options?.wasmUrl ?? wasmUrl,
+        wasiWorkerUrl: options?.wasiWorkerUrl ?? wasiWorkerUrl,
+        asyncWorkPoolSize:
+          options?.asyncWorkPoolSize !== undefined
+            ? normalizeAsyncWorkPoolSize(options.asyncWorkPoolSize)
+            : asyncWorkPoolSize,
+      },
+    })
+      .then(() => {
+        clientInitialized = true;
+      })
+      .finally(() => {
+        clientInitPromise = null;
+      });
+
+    return clientInitPromise;
+  }
+
+  async function convertClient(
+    plyData: Uint8Array,
+    options?: ConvertOptions
+  ): Promise<ConversionResult> {
+    if (!clientInitialized) {
+      await initClientWasm();
+    }
+
+    return clientPostMessage<ConversionResult>({
+      type: "convert",
+      payload: {
+        plyData,
+        sort: options?.sort ?? true,
+      },
     });
   }
 
   return {
-    async initWasm(options?: InitOptions): Promise<void> {
-      if (clientInitialized) return;
-
-      console.log("[ply2splat client] Initializing WASM...");
-      await clientPostMessage("init", {
-        wasmUrl: options?.wasmUrl ?? wasmUrl,
-        wasiWorkerUrl: options?.wasiWorkerUrl ?? wasiWorkerUrl,
-        asyncWorkPoolSize: options?.asyncWorkPoolSize ?? asyncWorkPoolSize,
-      });
-      clientInitialized = true;
-      console.log("[ply2splat client] WASM initialized");
-    },
-
-    async convert(
-      plyData: Uint8Array,
-      options?: ConvertOptions
-    ): Promise<ConversionResult> {
-      if (!clientInitialized) {
-        await this.initWasm();
-      }
-      console.log("[ply2splat client] Converting PLY data...");
-      return clientPostMessage<ConversionResult>("convert", {
-        plyData,
-        sort: options?.sort ?? true,
-      });
-    },
+    initWasm: initClientWasm,
+    convert: convertClient,
 
     terminate(): void {
+      rejectPendingMessages(new Error("Worker terminated"));
       if (clientWorker) {
         clientWorker.terminate();
         clientWorker = null;
-        clientInitialized = false;
-        clientPendingMessages.clear();
-        console.log("[ply2splat client] Worker terminated");
       }
+      clientInitialized = false;
+      clientInitPromise = null;
     },
 
     isInitialized(): boolean {
       return clientInitialized;
     },
   };
+}
+
+function getDefaultClient(): Ply2SplatClient {
+  if (!defaultClient) {
+    defaultClient = createClient();
+  }
+  return defaultClient;
+}
+
+export async function initWasm(options?: InitOptions): Promise<void> {
+  return getDefaultClient().initWasm(options);
+}
+
+export async function convert(
+  plyData: Uint8Array,
+  options?: ConvertOptions
+): Promise<ConversionResult> {
+  return getDefaultClient().convert(plyData, options);
+}
+
+export function terminate(): void {
+  if (defaultClient) {
+    defaultClient.terminate();
+    defaultClient = null;
+  }
+}
+
+export function isInitialized(): boolean {
+  return defaultClient?.isInitialized() ?? false;
 }

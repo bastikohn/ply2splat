@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: 22
           cache: "pnpm"
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install
         uses: dtolnay/rust-toolchain@stable
@@ -50,7 +50,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: ESLint
         run: pnpm lint
@@ -118,7 +118,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -151,14 +151,14 @@ jobs:
         if: ${{ matrix.settings.setup }}
         shell: bash
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Setup node x86
         uses: actions/setup-node@v6
         if: matrix.settings.target == 'i686-pc-windows-msvc'
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
           architecture: x86
       - name: Build
         run: ${{ matrix.settings.build }}
@@ -215,7 +215,7 @@ jobs:
             env
             freebsd-version
             cd crates/ply2splat-napi
-            pnpm install --no-frozen-lockfile
+            pnpm install --frozen-lockfile
             pnpm build:release
             rm -rf node_modules
             rm -rf target
@@ -258,9 +258,9 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
           architecture: ${{ matrix.settings.architecture }}
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
@@ -299,7 +299,7 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: pnpm
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Output docker params
         id: docker
         run: |
@@ -322,7 +322,7 @@ jobs:
           echo "PNPM_STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
       # use --force to download the all platform/arch dependencies
       - name: Install dependencies
-        run: pnpm install --force --no-frozen-lockfile
+        run: pnpm install --force --frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
@@ -360,9 +360,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Download artifacts
         uses: actions/download-artifact@v6
         with:
@@ -395,9 +395,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: crates/ply2splat-napi/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       - name: Download all artifacts
         uses: actions/download-artifact@v6
         with:
@@ -428,6 +428,10 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       # Build and publish @ply2splat/browser package
+      - name: Build browser package
+        working-directory: packages/ply2splat-browser
+        run: pnpm build
+
       - name: Update browser package dependency version
         working-directory: packages/ply2splat-browser
         run: |
@@ -435,14 +439,6 @@ jobs:
           VERSION=$(node -p "require('../../crates/ply2splat-napi/package.json').version")
           echo "Setting @ply2splat/native-wasm32-wasi version to $VERSION"
           npm pkg set dependencies.@ply2splat/native-wasm32-wasi="$VERSION"
-
-      - name: Install browser package dependencies
-        working-directory: packages/ply2splat-browser
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Build browser package
-        working-directory: packages/ply2splat-browser
-        run: pnpm build
 
       - name: Publish browser package
         working-directory: packages/ply2splat-browser

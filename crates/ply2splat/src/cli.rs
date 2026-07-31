@@ -22,12 +22,27 @@ pub struct CliArgs {
 }
 
 /// Runs the CLI logic with the given arguments.
+///
+/// Parse failures are returned as errors instead of exiting the process, so this
+/// is safe to call from library contexts (Node/Python bindings).
 pub fn run<I, T>(args: I) -> Result<()>
 where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    let args = CliArgs::parse_from(args);
+    let args = match CliArgs::try_parse_from(args) {
+        Ok(args) => args,
+        Err(err)
+            if matches!(
+                err.kind(),
+                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion
+            ) =>
+        {
+            err.print()?;
+            return Ok(());
+        }
+        Err(err) => return Err(err.into()),
+    };
     let start_total = Instant::now();
 
     println!("Reading PLY file: {:?}", args.input);
