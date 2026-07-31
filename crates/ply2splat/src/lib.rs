@@ -265,15 +265,16 @@ impl SplatPoint {
 pub fn load_ply_from_bytes(data: &[u8]) -> Result<Vec<PlyGaussian>> {
     let mut cursor = Cursor::new(data);
     let parser = Parser::<RawPlyGaussian>::new();
-    let ply = parser
+    let mut ply = parser
         .read_ply(&mut cursor)
         .context("Failed to parse PLY data")?;
 
+    // Take ownership instead of cloning; vertex payloads can be hundreds of MB.
     let vertices = ply
         .payload
-        .get("vertex")
+        .remove("vertex")
         .context("PLY data has no 'vertex' element")?;
-    validate_vertices(vertices.clone())
+    validate_vertices(vertices)
 }
 
 /// Loads a PLY file and parses it into a vector of `PlyGaussian`.
@@ -289,15 +290,16 @@ pub fn load_ply<P: AsRef<Path>>(path: P) -> Result<Vec<PlyGaussian>> {
     let f = File::open(path).context("Failed to open PLY file")?;
     let mut f = BufReader::with_capacity(10 * 1024 * 1024, f); // 10MB buffer
     let parser = Parser::<RawPlyGaussian>::new();
-    let ply = parser
+    let mut ply = parser
         .read_ply(&mut f)
         .context("Failed to parse PLY file")?;
 
+    // Take ownership instead of cloning; vertex payloads can be hundreds of MB.
     let vertices = ply
         .payload
-        .get("vertex")
+        .remove("vertex")
         .context("PLY file has no 'vertex' element")?;
-    validate_vertices(vertices.clone())
+    validate_vertices(vertices)
 }
 
 fn compare_splat_entries(a: &(SplatPoint, f32), b: &(SplatPoint, f32)) -> Ordering {
